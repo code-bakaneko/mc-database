@@ -211,6 +211,33 @@
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; outline: none;
   }
   input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  .combo { position: relative; }
+  .combo-list {
+    position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 5;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+    box-shadow: var(--shadow); max-height: 190px; overflow-y: auto; display: none;
+  }
+  .combo-list.show { display: block; }
+  .combo-list div { padding: 8px 12px; cursor: pointer; font-size: 14px; }
+  .combo-list div:hover { background: var(--accent); color: #fff; }
+  .combo-list .none { color: var(--muted); font-style: italic; cursor: default; }
+  .combo-list .none:hover { background: transparent; color: var(--muted); }
+  .site-check-list {
+    display: flex; flex-direction: column; gap: 2px; max-height: 150px; overflow-y: auto;
+    border: 1px solid var(--border); border-radius: 4px; padding: 6px; background: var(--panel-2);
+  }
+  .site-check-list label {
+    display: flex; align-items: center; gap: 9px; margin: 0; padding: 5px 6px; border-radius: 3px;
+    font-weight: 400; color: var(--text); font-size: 14px; text-transform: none; letter-spacing: 0; cursor: pointer;
+  }
+  .site-check-list label:hover { background: var(--panel); }
+  .site-check-list input[type=checkbox] { width: auto; margin: 0; }
+  .site-check-empty { color: var(--muted); font-size: 13px; padding: 6px; }
+  .site-row { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; }
+  .site-row .s-name { font-weight: 600; flex: none; }
+  .site-row .s-url { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .site-row button { padding: 5px 9px; }
+  .links a.site-link { border-color: var(--link); color: var(--link); font-weight: 600; }
   textarea { resize: vertical; min-height: 90px; }
   .hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
   .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
@@ -228,6 +255,7 @@
       <input id="search" type="text" placeholder="Search guides, steps, links…" autocomplete="off">
     </div>
     <button class="primary" onclick="openEditor()">+ New Entry</button>
+    <button onclick="openSites()" title="Manage your saved portals">🌐 Sites</button>
     <button class="icon-btn" title="Export backup" onclick="exportData()">💾</button>
     <button class="icon-btn" title="Import backup" onclick="document.getElementById('importFile').click()">📂</button>
     <button class="icon-btn" id="compactBtn" title="Compact view (collapse guides)" onclick="toggleCompact()">▤</button>
@@ -272,20 +300,29 @@
       </div>
     </div>
 
-    <div id="versionWrap">
-      <label>Version <span style="font-weight:400;">(optional)</span></label>
-      <input type="text" id="fVersion" placeholder="e.g. v3  or  2026-08-01">
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:140px;" id="versionWrap">
+        <label>Version <span style="font-weight:400;">(optional)</span></label>
+        <input type="text" id="fVersion" placeholder="e.g. v3  or  2026-08-01">
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <label>Topic / Category</label>
+        <div class="combo">
+          <input type="text" id="fCategory" placeholder="e.g. Passwords" autocomplete="off">
+          <div class="combo-list" id="catOptions"></div>
+        </div>
+      </div>
     </div>
-
-    <label>Topic / Category</label>
-    <input type="text" id="fCategory" list="catList" placeholder="e.g. Passwords">
-    <datalist id="catList"></datalist>
 
     <label id="lblOriginal">Original text (paste the official guide here)</label>
     <textarea id="fOriginal" placeholder="Paste the official KBA / BBP / SharePoint text here, exactly as-is."></textarea>
     <div class="hint" id="hintOriginal">Kept untouched as your source of truth. After saving, use 🎨 Customize to build it into a styled guide with images.</div>
 
-    <label>Links (one per line)</label>
+    <label>Attach saved sites <span style="font-weight:400;">(portals you log into)</span></label>
+    <div class="site-check-list" id="siteChecks"></div>
+    <div class="hint"><a href="#" onclick="openSites();return false;" style="color:var(--link);">＋ Manage my sites</a></div>
+
+    <label>Other links (one per line)</label>
     <textarea id="fLinks" placeholder="Label | https://example.com&#10;Password Portal | https://portal.example.com"></textarea>
     <div class="hint">Format: <b>Label | URL</b> — or just paste a URL on its own line.</div>
 
@@ -344,9 +381,34 @@
   </div>
 </div>
 
+<!-- Sites Manager Modal -->
+<div class="overlay" id="sitesOverlay">
+  <div class="modal">
+    <h2>🌐 My Sites</h2>
+    <div class="hint" style="margin-bottom:12px;">Save the portals you log into often — assigning, tracking, shipping, etc. Then tick them on any entry from the New Entry form.</div>
+    <div id="sitesList"></div>
+    <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; align-items:flex-end;">
+      <div style="flex:1; min-width:130px;">
+        <label style="margin-top:0;">Name</label>
+        <input type="text" id="siteName" placeholder="e.g. Shipping Portal">
+      </div>
+      <div style="flex:2; min-width:170px;">
+        <label style="margin-top:0;">URL</label>
+        <input type="text" id="siteUrl" placeholder="https://…">
+      </div>
+      <button class="primary" onclick="addSite()">Add</button>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="closeSites()">Done</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORE_KEY = "kb_entries_v1";
+const SITES_KEY = "kb_sites_v1";
 let entries = [];
+let sites = [];
 let activeCat = "All";
 let activeType = "All";
 let query = "";
@@ -374,6 +436,30 @@ const SEED = [
   }
 ];
 
+/* ---------- Two long dummy entries (injected once into existing data) ---------- */
+const SAMPLES = [
+  {
+    id: uid(), type: "KBA", ref: "KBA0045512", version: "v5", category: "Onboarding", siteIds: [], guide: "",
+    title: "New Hire Account Provisioning — Full Checklist (dummy)",
+    original:
+"PURPOSE\nThis article covers the complete process for provisioning accounts and access for a newly hired employee, from the moment the HR ticket is received through to first-day handoff. Follow every step in order — skipping steps is the most common cause of first-day access failures.\n\nPREREQUISITES\n- An approved onboarding ticket from HR containing the employee's legal name, start date, department, manager, and job title.\n- Your provisioning console access (PRV role) must be active.\n- The employee's building/site code, confirmed with facilities.\n\nSTEP 1 — Validate the HR ticket\nConfirm the ticket contains all required fields. If the start date is more than 30 days out, place the ticket in the Scheduled queue and stop here; provisioning too early triggers automatic account expiry.\n\nSTEP 2 — Create the identity record\nOpen the Identity Management console and select New Identity. Enter the legal name exactly as it appears on the HR ticket. The system will auto-generate the network ID in the format first initial + last name + numeric suffix. Record this network ID on the ticket.\n\nSTEP 3 — Assign the mailbox\nProvision the Exchange mailbox using the standard regional template that matches the employee's site code. Set the mailbox size quota per department policy (Standard = 5GB, Executive = 25GB). Verify the address does not collide with an existing distribution list.\n\nSTEP 4 — Group and role membership\nAdd the identity to the base security groups for their department. Then add job-title-specific role groups from the entitlement catalog. Do NOT copy access from an existing employee (\"model after\") — this propagates access creep and will fail the quarterly access review.\n\nSTEP 5 — Application provisioning\nRaise downstream provisioning requests for each application the role requires: finance systems, ticketing, VPN, and any department SaaS tools. Each of these has its own SLA; submit them all on day one so they complete before the start date.\n\nSTEP 6 — Hardware and endpoint\nConfirm with the asset team that a laptop has been imaged and tagged to the employee's network ID. Verify the endpoint is enrolled in device management before the machine ships.\n\nSTEP 7 — Temporary credentials\nGenerate a one-time temporary password and set the must-change-at-logon flag. Deliver credentials to the hiring manager through the secure handoff channel only — never by plain email.\n\nSTEP 8 — First-day verification\nOn the start date, confirm the employee can log in, reach email, and open at least one line-of-business application. Close the onboarding ticket only after this verification passes.\n\nCOMMON ISSUES\n- Login works but no email: mailbox replication still in progress, allow up to 4 hours.\n- App access missing: check whether the downstream provisioning request is still open.\n- Account locked on first login: temporary password was used more than the allowed 3 times before change.",
+    links: [["Onboarding ticket queue", "https://example.com/onboarding"], ["Entitlement catalog", "https://example.com/catalog"]]
+  },
+  {
+    id: uid(), type: "BBP", ref: "BBP0003390", version: "2026-06", category: "Network", siteIds: [], guide: "",
+    title: "VPN Connection Troubleshooting — Full Runbook (dummy)",
+    original:
+"SCOPE\nUse this runbook when a user reports they cannot connect to the corporate VPN, or connects but cannot reach internal resources. Work top to bottom — the steps are ordered from most common cause to least.\n\nBEFORE YOU START\nCollect from the user: their network ID, the exact error message or code, whether it worked previously, their internet connection type (home Wi-Fi, mobile hotspot, office), and the VPN client version.\n\nSECTION A — Confirm it's actually the VPN\n1. Have the user open any public website to confirm they have working internet at all. No internet = not a VPN problem; direct them to their ISP.\n2. Ask whether other colleagues on the same network are also affected. A wider outage means escalate to the network on-call rather than troubleshooting one user.\n\nSECTION B — Client-side checks\n3. Confirm the VPN client is the current approved version. Outdated clients are rejected by the gateway after each quarterly update. If old, have them update and retry.\n4. Fully quit and relaunch the client (not just disconnect/reconnect). A stale client process holds an expired session token.\n5. Reboot the machine if the client will not launch or hangs on \"Connecting…\" for more than 60 seconds.\n\nSECTION C — Authentication failures\n6. If the error mentions credentials or authentication: verify the account is not locked in the directory, and confirm the user's password has not expired.\n7. Confirm the multi-factor prompt is arriving. If MFA pushes are not received, check whether the user recently changed phones — the MFA token may need re-enrollment.\n8. Codes 691 / 812 indicate the account is valid but not authorized for remote access; confirm the user is in the VPN entitlement group.\n\nSECTION D — Connects but no internal access\n9. If the tunnel establishes but internal sites fail, check that the user is not on a network using a conflicting IP range (common with home routers using 10.x). If so, switch them to a mobile hotspot to confirm.\n10. Flush DNS on the client and retry. A cached public DNS entry can shadow the internal name.\n11. Verify split-tunnel vs full-tunnel policy matches what the role requires; the wrong profile blocks internal ranges.\n\nSECTION E — Escalation\nIf steps 1–11 do not resolve it, gather the client logs (Help > Export Logs), the exact error code, and the outputs you collected, then escalate to the Network team with all of it attached. Do not escalate without logs — it will be returned.\n\nKNOWN GOTCHAS\n- Hotel/airport captive portals block the VPN until the user opens a browser and accepts the portal terms.\n- Some mobile hotspots throttle long-lived connections; symptom is a tunnel that drops every few minutes.\n- Corporate laptops with a pending OS update may fail the posture check silently — the fix is to complete the update.",
+    links: [["Network on-call", "https://example.com/oncall"]]
+  }
+];
+function loadSamples() {
+  try { if (localStorage.getItem("kb_samples_v1")) return; } catch (e) {}
+  entries = SAMPLES.concat(entries);
+  save();
+  try { localStorage.setItem("kb_samples_v1", "1"); } catch (e) {}
+}
+
 /* ---------- Utilities ---------- */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function load() {
@@ -391,6 +477,7 @@ function migrate() {
     if (e.original === undefined) { e.original = e.body || ""; changed = true; }
     if (e.guide === undefined) { e.guide = e.custom ? plainToHtml(e.custom) : ""; changed = true; }
     if (e.version === undefined) { e.version = ""; changed = true; }
+    if (e.siteIds === undefined) { e.siteIds = []; changed = true; }
     if (e.body !== undefined) { delete e.body; changed = true; }
     if (e.custom !== undefined) { delete e.custom; changed = true; }
   });
@@ -399,6 +486,21 @@ function migrate() {
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }
   catch (e) { alert("Could not save — browser storage may be full or blocked."); }
+}
+function loadSites() {
+  try {
+    const raw = localStorage.getItem(SITES_KEY);
+    if (raw) { sites = JSON.parse(raw); return; }
+  } catch (e) {}
+  sites = [
+    { id: uid(), name: "Assignment Portal", url: "https://example.com/assign" },
+    { id: uid(), name: "Tracking System", url: "https://example.com/track" },
+    { id: uid(), name: "Shipping Portal", url: "https://example.com/shipping" }
+  ];
+  saveSites();
+}
+function saveSites() {
+  try { localStorage.setItem(SITES_KEY, JSON.stringify(sites)); } catch (e) {}
 }
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -443,9 +545,6 @@ function renderCategories() {
   html += catRow("All", entries.length);
   cats.forEach(c => html += catRow(c, counts[c]));
   aside.innerHTML = html;
-
-  // datalist for editor
-  document.getElementById("catList").innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join("");
 }
 function typeRow(name, count, cls) {
   const active = name === activeType ? " active" : "";
@@ -531,7 +630,9 @@ function render() {
     return;
   }
   cards.innerHTML = list.map(e => {
-    const links = (e.links || []).filter(l => l[1] && l[1] !== "#").map(l =>
+    const siteLinks = (e.siteIds || []).map(id => sites.find(s => s.id === id)).filter(Boolean).map(s =>
+      `<a class="site-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">🌐 ${escapeHtml(s.name)}</a>`).join("");
+    const links = siteLinks + (e.links || []).filter(l => l[1] && l[1] !== "#").map(l =>
       `<a href="${escapeHtml(l[1])}" target="_blank" rel="noopener">🔗 ${escapeHtml(l[0] || l[1])}</a>`).join("");
     const type = e.type || "Custom";
     const refHtml = e.ref ? `<span class="ref-num">${highlight(e.ref, query)}</span>` : "";
@@ -570,6 +671,7 @@ function openEditor(id) {
     document.getElementById("fCategory").value = e.category || "";
     document.getElementById("fOriginal").value = e.original || "";
     document.getElementById("fLinks").value = (e.links || []).map(l => l[0] === l[1] ? l[1] : `${l[0]} | ${l[1]}`).join("\n");
+    renderSiteChecks(e.siteIds || []);
   } else {
     document.getElementById("modalTitle").textContent = "New Entry";
     document.getElementById("editId").value = "";
@@ -580,6 +682,7 @@ function openEditor(id) {
     document.getElementById("fCategory").value = activeCat !== "All" ? activeCat : "";
     document.getElementById("fOriginal").value = "";
     document.getElementById("fLinks").value = "";
+    renderSiteChecks([]);
   }
   updateEditorMode();
   overlay.classList.add("show");
@@ -601,7 +704,19 @@ function updateEditorMode() {
     isCustom ? "Your own guide — one step per line shows as a numbered list. Use 🎨 Customize after saving to add formatting and images."
              : "Kept untouched as your source of truth. After saving, use 🎨 Customize to build it into a styled guide with images.";
 }
-function closeEditor() { document.getElementById("overlay").classList.remove("show"); }
+function closeEditor() { document.getElementById("overlay").classList.remove("show"); hideCatOptions(); }
+
+/* Custom category dropdown (replaces the wonky native datalist) */
+function showCatOptions() {
+  const box = document.getElementById("catOptions");
+  const val = document.getElementById("fCategory").value.trim().toLowerCase();
+  const cats = Object.keys(categoryCounts()).sort()
+    .filter(c => c.toLowerCase() !== "uncategorized" && c.toLowerCase().includes(val));
+  if (!cats.length) { hideCatOptions(); return; }
+  box.innerHTML = cats.map(c => `<div data-v="${escapeHtml(c)}">${escapeHtml(c)}</div>`).join("");
+  box.classList.add("show");
+}
+function hideCatOptions() { document.getElementById("catOptions").classList.remove("show"); }
 function parseLinks(text) {
   return text.split("\n").map(l => l.trim()).filter(Boolean).map(l => {
     const parts = l.split("|").map(p => p.trim());
@@ -621,6 +736,7 @@ function saveEntry() {
     version: type === "Custom" ? "" : document.getElementById("fVersion").value.trim(),
     category: document.getElementById("fCategory").value.trim() || "Uncategorized",
     original: document.getElementById("fOriginal").value.trim(),
+    siteIds: Array.from(document.querySelectorAll("#siteChecks input:checked")).map(c => c.value),
     links: parseLinks(document.getElementById("fLinks").value)
   };
   const id = document.getElementById("editId").value;
@@ -773,7 +889,8 @@ function saveCustom() {
 
 /* ---------- Export / Import ---------- */
 function exportData() {
-  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -788,18 +905,79 @@ function importData(ev) {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      if (!Array.isArray(data)) throw new Error("bad format");
-      if (confirm("Import " + data.length + " entries?\n\nOK = replace everything\nCancel = merge with existing")) {
-        entries = data;
+      // Accept both the old format (a plain array of entries) and the new {entries, sites} object
+      let impEntries, impSites = null;
+      if (Array.isArray(data)) { impEntries = data; }
+      else if (data && Array.isArray(data.entries)) { impEntries = data.entries; impSites = Array.isArray(data.sites) ? data.sites : null; }
+      else throw new Error("bad format");
+
+      if (confirm("Import " + impEntries.length + " entries" + (impSites ? " and " + impSites.length + " sites" : "") + "?\n\nOK = replace everything\nCancel = merge with existing")) {
+        entries = impEntries;
+        if (impSites) sites = impSites;
       } else {
         const ids = new Set(entries.map(e => e.id));
-        data.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
+        impEntries.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
+        if (impSites) {
+          const sids = new Set(sites.map(s => s.id));
+          impSites.forEach(s => { if (!sids.has(s.id)) sites.push(s); });
+        }
       }
-      save(); render();
+      migrate(); saveSites(); save(); render();
     } catch (e) { alert("That file could not be read as a valid backup."); }
   };
   reader.readAsText(file);
   ev.target.value = "";
+}
+
+/* ---------- Sites (reusable portals) ---------- */
+function renderSiteChecks(selected) {
+  selected = selected || [];
+  const box = document.getElementById("siteChecks");
+  if (!sites.length) {
+    box.innerHTML = `<div class="site-check-empty">No saved sites yet — click “Manage my sites” below to add your portals.</div>`;
+    return;
+  }
+  box.innerHTML = sites.map(s =>
+    `<label><input type="checkbox" value="${s.id}" ${selected.includes(s.id) ? "checked" : ""}> ${escapeHtml(s.name)}</label>`
+  ).join("");
+}
+function refreshSiteChecksKeepSelection() {
+  const selected = Array.from(document.querySelectorAll("#siteChecks input:checked")).map(c => c.value);
+  renderSiteChecks(selected);
+}
+function openSites() { renderSitesList(); document.getElementById("sitesOverlay").classList.add("show"); }
+function closeSites() { document.getElementById("sitesOverlay").classList.remove("show"); }
+function renderSitesList() {
+  const box = document.getElementById("sitesList");
+  if (!sites.length) { box.innerHTML = `<div class="site-check-empty">No sites yet. Add your first one below.</div>`; return; }
+  box.innerHTML = sites.map(s =>
+    `<div class="site-row">
+       <span class="s-name">${escapeHtml(s.name)}</span>
+       <span class="s-url">${escapeHtml(s.url)}</span>
+       <button class="del" title="Remove" onclick="deleteSite('${s.id}')">🗑️</button>
+     </div>`).join("");
+}
+function addSite() {
+  const nameEl = document.getElementById("siteName"), urlEl = document.getElementById("siteUrl");
+  const name = nameEl.value.trim();
+  let url = urlEl.value.trim();
+  if (!name || !url) { alert("Enter both a name and a URL."); return; }
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  sites.push({ id: uid(), name, url });
+  saveSites();
+  nameEl.value = ""; urlEl.value = ""; nameEl.focus();
+  renderSitesList();
+  if (document.getElementById("overlay").classList.contains("show")) refreshSiteChecksKeepSelection();
+  render();
+}
+function deleteSite(id) {
+  const s = sites.find(x => x.id === id);
+  if (!s || !confirm(`Remove “${s.name}” from your saved sites?`)) return;
+  sites = sites.filter(x => x.id !== id);
+  saveSites();
+  renderSitesList();
+  if (document.getElementById("overlay").classList.contains("show")) refreshSiteChecksKeepSelection();
+  render();
 }
 
 /* ---------- Compact view ---------- */
@@ -837,17 +1015,32 @@ function toggleTheme() {
 /* ---------- Wire up ---------- */
 document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
 document.getElementById("fType").addEventListener("change", updateEditorMode);
+(function wireCategoryCombo() {
+  const input = document.getElementById("fCategory");
+  const box = document.getElementById("catOptions");
+  input.addEventListener("focus", showCatOptions);
+  input.addEventListener("input", showCatOptions);
+  input.addEventListener("blur", () => setTimeout(hideCatOptions, 120));
+  box.addEventListener("mousedown", e => {
+    const item = e.target.closest("[data-v]");
+    if (item) { input.value = item.getAttribute("data-v"); hideCatOptions(); }
+  });
+})();
 document.getElementById("overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeEditor(); });
 document.getElementById("diffOverlay").addEventListener("click", e => { if (e.target.id === "diffOverlay") closeDiff(); });
 document.getElementById("customOverlay").addEventListener("click", e => { if (e.target.id === "customOverlay") closeCustom(); });
+document.getElementById("sitesOverlay").addEventListener("click", e => { if (e.target.id === "sitesOverlay") closeSites(); });
+document.getElementById("siteUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSite(); } });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { closeEditor(); closeDiff(); closeCustom(); }
+  if (e.key === "Escape") { closeEditor(); closeDiff(); closeCustom(); closeSites(); }
   if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
     e.preventDefault(); document.getElementById("search").focus();
   }
 });
 
 load();
+loadSites();
+loadSamples();
 render();
 </script>
 </body>
