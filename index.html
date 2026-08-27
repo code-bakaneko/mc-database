@@ -315,6 +315,13 @@
   .site-edit .row input.s-in-url { flex: 2; min-width: 160px; }
   .site-edit .row.end { justify-content: flex-end; }
   .site-form { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; }
+  .reuse-opt {
+    display: flex; align-items: flex-start; gap: 9px; margin-bottom: 14px; padding: 9px 11px;
+    border: 1px solid var(--border); border-radius: 4px; background: var(--panel-2);
+    font-weight: 600; color: var(--text); font-size: 14px; text-transform: none; letter-spacing: 0; cursor: pointer;
+  }
+  .reuse-opt input { width: auto; margin: 3px 0 0; flex: none; }
+  .reuse-opt .hint { display: block; font-weight: 400; }
   .grp-box { border: 1px solid var(--border); border-radius: 4px; padding: 8px; background: var(--panel-2); }
   .grp-row { display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
   .grp-row input[type=color] {
@@ -565,6 +572,10 @@
   <div class="modal">
     <h2>🌐 My Sites</h2>
     <div class="hint" style="margin-bottom:12px;">Save the portals you log into often — assigning, tracking, shipping, etc. Then tick them on any entry from the New Entry form.</div>
+    <label class="reuse-opt" style="margin-top:0;">
+      <input type="checkbox" id="siteReuseChk" onchange="toggleSiteReuse(this.checked)">
+      <span>Reuse one tab per site<span class="hint" style="margin-top:2px;">Clicking a site returns to the tab it is already open in, instead of opening another one. Ctrl/⌘-click still opens a fresh tab.</span></span>
+    </label>
     <label style="margin-top:0;">Groups <span style="font-weight:400;">(sort your sites by the kind of task they're for)</span></label>
     <div class="grp-box" id="groupsBox"></div>
     <label>Your sites</label>
@@ -998,7 +1009,7 @@ function render() {
   }
   cards.innerHTML = list.map(e => {
     const siteLinks = (e.siteIds || []).map(id => sites.find(s => s.id === id)).filter(Boolean).map(s =>
-      `<a class="site-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml((s.note || "").trim() || s.url)}">🌐 ${escapeHtml(s.name)}</a>`).join("");
+      `<a class="site-link" href="${escapeHtml(s.url)}" target="${siteTarget(s)}" ${siteReuse ? "" : 'rel="noopener"'} onclick="return openSite(event,'${s.id}')" style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml((s.note || "").trim() || s.url)}">🌐 ${escapeHtml(s.name)}</a>`).join("");
     const links = siteLinks + (e.links || []).filter(l => l[1] && l[1] !== "#").map(l =>
       `<a href="${escapeHtml(l[1])}" target="_blank" rel="noopener">🔗 ${escapeHtml(l[0] || l[1])}</a>`).join("");
     const type = e.type || "Custom";
@@ -1370,6 +1381,7 @@ function refreshSiteChecksKeepSelection() {
 }
 function openSites() {
   editingSiteId = null;
+  document.getElementById("siteReuseChk").checked = siteReuse;
   renderGroups();
   renderSitesList();
   document.getElementById("siteGroup").innerHTML =
@@ -1378,6 +1390,35 @@ function openSites() {
 }
 function closeSites() { document.getElementById("sitesOverlay").classList.remove("show"); }
 let editingSiteId = null;
+let siteReuse = true;          // reuse one tab per site instead of piling up new ones
+const siteWindows = {};        // site id -> the tab we opened for it
+(function initSiteReuse() {
+  try { siteReuse = localStorage.getItem("kb_site_reuse") !== "0"; } catch (e) {}
+})();
+function toggleSiteReuse(on) {
+  siteReuse = !!on;
+  try { localStorage.setItem("kb_site_reuse", siteReuse ? "1" : "0"); } catch (e) {}
+  refreshSitesUI();
+}
+function siteTarget(s) { return siteReuse ? "kbsite_" + s.id : "_blank"; }
+/* Click a site: bring its existing tab forward instead of opening another one.
+   Ctrl/Cmd/Shift/middle click still get the browser's normal new-tab behaviour. */
+function openSite(ev, id) {
+  if (!siteReuse) return true;
+  if (ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey || ev.button === 1)) return true;
+  const s = sites.find(x => x.id === id);
+  if (!s) return true;
+  if (ev) ev.preventDefault();
+  const name = "kbsite_" + s.id;
+  const held = siteWindows[id];
+  try {
+    if (held && !held.closed) { held.location.href = s.url; held.focus(); return false; }
+  } catch (e) { /* the tab went cross-origin on us; fall through and re-open by name */ }
+  // Opening by name finds the tab again even after this page has been reloaded
+  const win = window.open(s.url, name);
+  if (win) { siteWindows[id] = win; try { win.focus(); } catch (e) {} }
+  return false;
+}
 function renderGroups() {
   const box = document.getElementById("groupsBox");
   if (!box) return;
@@ -1453,7 +1494,8 @@ function renderSitesPanel() {
   }
   const link = s => {
     const note = (s.note || "").trim();
-    return `<a class="sp-site" href="${escapeHtml(s.url)}" target="_blank" rel="noopener"
+    return `<a class="sp-site" href="${escapeHtml(s.url)}" target="${siteTarget(s)}" ${siteReuse ? "" : 'rel="noopener"'}
+       onclick="return openSite(event,'${s.id}')" onauxclick="return true"
        style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml(note || s.url)}">
        <span class="sp-name">${escapeHtml(s.name)}</span>
        ${note ? `<span class="sp-note">${escapeHtml(note)}</span>` : ""}
