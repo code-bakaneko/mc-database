@@ -101,6 +101,11 @@
   .card.compact .card-head { cursor: pointer; }
   .card.compact .card-head h3 { font-size: 16px; }
   .card.compact .meta { margin-top: 6px; }
+  .preview {
+    margin-top: 8px; font-size: 14px; color: var(--muted); white-space: pre-wrap; cursor: pointer;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden;
+  }
+  .preview:hover { color: var(--text); }
   .chevron { font-size: 10px; color: var(--muted); transition: transform .15s; flex: none; }
   .chevron.open { transform: rotate(90deg); }
   button.icon-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -130,6 +135,7 @@
   .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 7px; vertical-align: middle; }
   .body-text { white-space: pre-wrap; margin: 8px 0 0; }
   .links { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .links-top { margin-top: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
   .links a {
     font-size: 13px; text-decoration: none; color: var(--link);
     background: var(--panel-2); border: 1px solid var(--border);
@@ -280,6 +286,26 @@
   .hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
   .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
   .muted-btn { color: var(--muted); }
+  /* Journal */
+  .hidden { display: none !important; }
+  .viewnav { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; flex: none; }
+  .viewnav button { border: none; border-radius: 0; padding: 9px 13px; font-size: 13px; font-weight: 600; background: var(--panel-2); }
+  .viewnav button.active { background: var(--accent); color: #fff; }
+  .viewnav button:not(.active):hover { background: var(--border); }
+  .j-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .j-head h2 { margin: 0; font-size: 20px; }
+  .j-today-pill { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    padding: 3px 9px; border-radius: 3px; background: var(--accent); color: #fff; }
+  .j-status { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .j-editor { min-height: 460px; max-height: none; }
+  .j-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .j-actions .j-count { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .j-picker { display: flex; gap: 6px; align-items: center; padding: 4px 4px 10px; }
+  .j-picker input[type=date] { width: 100%; padding: 7px 9px; font: inherit; font-size: 13px; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; }
+  .cat .j-when { display: block; font-size: 11px; color: var(--muted); }
+  .cat.active .j-when { color: #fff; opacity: .85; }
+  .cat .j-empty-dot { opacity: .5; font-style: italic; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px; }
   .count-badge { font-size: 12px; color: var(--muted); }
 </style>
@@ -288,12 +314,16 @@
 <header>
   <div class="bar">
     <div class="brand"><span class="dot"></span> Knowledge Base</div>
+    <div class="viewnav">
+      <button id="navKb" class="active" onclick="setMode('kb')">📚 Guides</button>
+      <button id="navJournal" onclick="setMode('journal')">📓 Journal</button>
+    </div>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="search" type="text" placeholder="Search guides, steps, links…" autocomplete="off">
     </div>
-    <button class="primary" onclick="openEditor()">+ New Entry</button>
-    <button onclick="openSites()" title="Manage your saved portals">🌐 Sites</button>
+    <button class="primary" id="newEntryBtn" onclick="openEditor()">+ New Entry</button>
+    <button id="sitesBtn" onclick="openSites()" title="Manage your saved portals">🌐 Sites</button>
     <button class="icon-btn" title="Export backup" onclick="exportData()">💾</button>
     <button class="icon-btn" title="Import backup" onclick="document.getElementById('importFile').click()">📂</button>
     <button class="icon-btn" id="compactBtn" title="Compact view (collapse guides)" onclick="toggleCompact()">▤</button>
@@ -302,11 +332,49 @@
   </div>
 </header>
 
-<main>
+<main id="kbView">
   <aside id="categories"></aside>
   <div>
     <div class="count-badge" id="countBadge" style="margin-bottom:12px;"></div>
     <div class="cards" id="cards"></div>
+  </div>
+</main>
+
+<main id="journalView" class="hidden">
+  <aside>
+    <div class="aside-label">Go to a day</div>
+    <div class="j-picker"><input type="date" id="jDatePick" onchange="openDay(this.value)"></div>
+    <div class="aside-divider"></div>
+    <div class="aside-label">My days</div>
+    <div id="journalDays"></div>
+  </aside>
+  <div>
+    <div class="j-head">
+      <h2 id="journalTitle"></h2>
+      <span id="journalPill"></span>
+      <span class="j-status" id="journalStatus"></span>
+    </div>
+    <div class="rte-toolbar">
+      <button type="button" title="Bold" onmousedown="event.preventDefault()" onclick="rte('bold',null,'journalBody')"><b>B</b></button>
+      <button type="button" title="Italic" onmousedown="event.preventDefault()" onclick="rte('italic',null,'journalBody')"><i>I</i></button>
+      <button type="button" title="Underline" onmousedown="event.preventDefault()" onclick="rte('underline',null,'journalBody')"><u>U</u></button>
+      <span class="sep"></span>
+      <button type="button" title="Heading" onmousedown="event.preventDefault()" onclick="rte('formatBlock','H2','journalBody')">H1</button>
+      <button type="button" title="Sub-heading" onmousedown="event.preventDefault()" onclick="rte('formatBlock','H3','journalBody')">H2</button>
+      <button type="button" title="Normal text" onmousedown="event.preventDefault()" onclick="rte('formatBlock','P','journalBody')">¶</button>
+      <span class="sep"></span>
+      <button type="button" title="Bulleted list" onmousedown="event.preventDefault()" onclick="rte('insertUnorderedList',null,'journalBody')">• List</button>
+      <button type="button" title="Numbered list" onmousedown="event.preventDefault()" onclick="rte('insertOrderedList',null,'journalBody')">1. List</button>
+      <span class="sep"></span>
+      <button type="button" title="Add link" onmousedown="event.preventDefault()" onclick="addRteLink('journalBody')">🔗</button>
+      <button type="button" title="Insert image" onmousedown="event.preventDefault()" onclick="document.getElementById('jImgFile').click()">🖼️ Image</button>
+      <input type="file" id="jImgFile" accept="image/*" style="display:none" onchange="insertImage(event,'journalBody')">
+    </div>
+    <div class="rte j-editor" id="journalBody" contenteditable="true" data-placeholder="What did you learn or work on today?"></div>
+    <div class="j-actions">
+      <button class="del" onclick="deleteDay()">🗑️ Delete this day</button>
+      <span class="j-count" id="journalCount"></span>
+    </div>
   </div>
 </main>
 
@@ -453,8 +521,14 @@
 <script>
 const STORE_KEY = "kb_entries_v1";
 const SITES_KEY = "kb_sites_v1";
+const JOURNAL_KEY = "kb_journal_v1";
 let entries = [];
 let sites = [];
+let journal = [];      // [{ date: "YYYY-MM-DD", html, updated }]
+let activeDay = "";    // the day currently open in the journal editor
+let mode = "kb";       // "kb" | "journal"
+let jSaveTimer = null;
+let dayPinned = false;  // true while you are deliberately reading an older day
 let activeCat = "All";
 let activeType = "All";
 let query = "";
@@ -577,6 +651,16 @@ function loadSites() {
   ];
   saveSites();
 }
+function loadJournal() {
+  try {
+    const raw = localStorage.getItem(JOURNAL_KEY);
+    if (raw) journal = JSON.parse(raw) || [];
+  } catch (e) { journal = []; }
+}
+function saveJournal() {
+  try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal)); }
+  catch (e) { alert("Could not save your journal — browser storage may be full."); }
+}
 function saveSites() {
   try { localStorage.setItem(SITES_KEY, JSON.stringify(sites)); } catch (e) {}
 }
@@ -693,6 +777,33 @@ function bodyToHtml(body, q) {
   if (!(body || "").trim()) return "";
   return `<p class="body-text">${highlight(body.replace(/\s+$/, ""), q)}</p>`;
 }
+function htmlToText(html) {
+  const box = document.createElement("div");
+  box.innerHTML = html || "";
+  box.querySelectorAll("br").forEach(n => n.replaceWith("\n"));
+  box.querySelectorAll("p,div,li,tr,h1,h2,h3,h4,h5,blockquote").forEach(n => n.append("\n"));
+  return (box.textContent || "").replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ")
+    .split("\n").map(l => l.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+function entryText(e) {
+  if (e.guide && e.guide.trim()) return htmlToText(e.guide);
+  if (e.originalHtml && e.originalHtml.trim()) return htmlToText(e.originalHtml);
+  return (e.original || "").trim();
+}
+function previewHtml(e) {
+  // Compact cards show the opening paragraph or two so you can tell entries apart at a glance.
+  const MAX = 320;
+  const text = entryText(e);
+  if (!text) return "";
+  let snip = text;
+  if (snip.length > MAX) {
+    snip = snip.slice(0, MAX);
+    const cut = snip.lastIndexOf(" ");
+    if (cut > MAX * 0.6) snip = snip.slice(0, cut);
+    snip = snip.replace(/[\s.,;:–-]+$/, "") + "…";
+  }
+  return `<div class="preview" onclick="toggleExpand('${e.id}')">${highlight(snip, query)}</div>`;
+}
 function originalHtmlFor(e) {
   // Rich paste keeps its own formatting; older plain-text entries render as typed.
   if (e.originalHtml && e.originalHtml.trim()) return `<div class="orig-html">${e.originalHtml}</div>`;
@@ -765,6 +876,7 @@ function markChecked(id, silent) {
 }
 
 function render() {
+  if (mode === "journal") return renderJournal();
   renderCategories();
   let list = entries.filter(matches);
   const terms = queryTerms();
@@ -803,14 +915,14 @@ function render() {
       <span class="tag">${escapeHtml(e.category || "Uncategorized")}</span></div>
       ${dueEditState[e.id] ? dueRowHtml(e) : ""}`;
     const bodyHtml = expanded ? `
+      ${links ? `<div class="links links-top">${links}</div>` : ""}
       ${entryContentHtml(e)}
-      ${links ? `<div class="links">${links}</div>` : ""}
       <div class="card-actions">
         <button onclick="openEditor('${e.id}')">✏️ Edit</button>
         <button onclick="openCustom('${e.id}')">🎨 ${e.guide && e.guide.trim() ? "Edit guide" : "Customize"}</button>
         ${type !== "Custom" ? `<button onclick="openDiff('${e.id}')">🔄 Check for update</button>` : ""}
         <button class="del" onclick="deleteEntry('${e.id}')">🗑️ Delete</button>
-      </div>` : "";
+      </div>` : previewHtml(e);
     return `<div class="card${compact ? " compact" : ""}">${head}${bodyHtml}</div>`;
   }).join("");
 }
@@ -1008,13 +1120,13 @@ function openCustom(id) {
   rte.focus();
 }
 function closeCustom() { document.getElementById("customOverlay").classList.remove("show"); customId = null; }
-function rte(cmd, val) {
-  document.getElementById("rteBody").focus();
+function rte(cmd, val, target) {
+  document.getElementById(target || "rteBody").focus();
   document.execCommand(cmd, false, val || null);
 }
-function addRteLink() {
+function addRteLink(target) {
   const url = prompt("Link URL:", "https://");
-  if (url) rte("createLink", url);
+  if (url) rte("createLink", url, target);
 }
 function resetGuideToOriginal() {
   const e = entries.find(x => x.id === customId);
@@ -1022,7 +1134,7 @@ function resetGuideToOriginal() {
     document.getElementById("rteBody").innerHTML = e.originalHtml || plainToHtml(e.original);
   }
 }
-function insertImage(ev) {
+function insertImage(ev, target) {
   const file = ev.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1038,8 +1150,9 @@ function insertImage(ev) {
       let dataUrl;
       try { dataUrl = canvas.toDataURL("image/jpeg", 0.82); }
       catch (e) { dataUrl = reader.result; }
-      document.getElementById("rteBody").focus();
+      document.getElementById(target || "rteBody").focus();
       document.execCommand("insertHTML", false, `<img src="${dataUrl}" alt="">`);
+      if (target === "journalBody") scheduleJournalSave();
     };
     img.onerror = () => alert("That image could not be read.");
     img.src = reader.result;
@@ -1060,7 +1173,8 @@ function saveCustom() {
 
 /* ---------- Export / Import ---------- */
 function exportData() {
-  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites };
+  if (mode === "journal") flushJournalSave();
+  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, journal };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1077,14 +1191,21 @@ function importData(ev) {
     try {
       const data = JSON.parse(reader.result);
       // Accept both the old format (a plain array of entries) and the new {entries, sites} object
-      let impEntries, impSites = null;
+      let impEntries, impSites = null, impJournal = null;
       if (Array.isArray(data)) { impEntries = data; }
-      else if (data && Array.isArray(data.entries)) { impEntries = data.entries; impSites = Array.isArray(data.sites) ? data.sites : null; }
+      else if (data && Array.isArray(data.entries)) {
+        impEntries = data.entries;
+        impSites = Array.isArray(data.sites) ? data.sites : null;
+        impJournal = Array.isArray(data.journal) ? data.journal : null;
+      }
       else throw new Error("bad format");
 
-      if (confirm("Import " + impEntries.length + " entries" + (impSites ? " and " + impSites.length + " sites" : "") + "?\n\nOK = replace everything\nCancel = merge with existing")) {
+      const parts = impEntries.length + " entries" + (impSites ? ", " + impSites.length + " sites" : "") +
+        (impJournal ? ", " + plural(impJournal.length, "journal day") : "");
+      if (confirm("Import " + parts + "?\n\nOK = replace everything\nCancel = merge with existing")) {
         entries = impEntries;
         if (impSites) sites = impSites;
+        if (impJournal) journal = impJournal;
       } else {
         const ids = new Set(entries.map(e => e.id));
         impEntries.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
@@ -1092,12 +1213,22 @@ function importData(ev) {
           const sids = new Set(sites.map(s => s.id));
           impSites.forEach(s => { if (!sids.has(s.id)) sites.push(s); });
         }
+        if (impJournal) {
+          impJournal.forEach(d => {
+            const mine = findDay(d.date);
+            if (!mine) journal.push(d);
+            else if (d.html && d.html !== mine.html) mine.html = mine.html ? mine.html + "<hr>" + d.html : d.html;
+          });
+        }
       }
       entries.forEach(e => {
         if (e.originalHtml) e.originalHtml = sanitizeHtml(e.originalHtml);
         if (e.guide) e.guide = sanitizeHtml(e.guide);
       });
-      migrate(); saveSites(); save(); render();
+      journal.forEach(d => { if (d.html) d.html = sanitizeHtml(d.html); });
+      migrate(); saveSites(); saveJournal(); save();
+      if (mode === "journal") { activeDay = ensureToday(); loadDayIntoEditor(); }
+      render();
     } catch (e) { alert("That file could not be read as a valid backup."); }
   };
   reader.readAsText(file);
@@ -1155,6 +1286,145 @@ function deleteSite(id) {
   render();
 }
 
+/* ---------- Journal (daily training notes) ---------- */
+function dayLabel(iso) {
+  try { return parseISO(iso).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
+  catch (e) { return iso; }
+}
+function shortDay(iso) {
+  try { return parseISO(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
+  catch (e) { return iso; }
+}
+function relDay(iso) {
+  const d = daysUntil(iso);
+  if (d === 0) return "Today";
+  if (d === -1) return "Yesterday";
+  if (d === 1) return "Tomorrow";
+  if (d < 0 && d > -7) return -d + " days ago";
+  return "";
+}
+function findDay(iso) { return journal.find(x => x.date === iso); }
+function ensureToday() {
+  // A fresh page for today is created automatically the first time you look each day.
+  const t = todayISO();
+  if (!findDay(t)) { journal.push({ date: t, html: "", updated: new Date().toISOString() }); saveJournal(); }
+  return t;
+}
+function wordCount(text) { return (text.match(/\S+/g) || []).length; }
+function dayText(day) { return htmlToText(day.html || ""); }
+function openDay(iso) {
+  if (!iso) return;
+  if (!findDay(iso)) { journal.push({ date: iso, html: "", updated: new Date().toISOString() }); saveJournal(); }
+  flushJournalSave();
+  activeDay = iso;
+  dayPinned = iso !== todayISO();
+  loadDayIntoEditor();
+  render();
+}
+function loadDayIntoEditor() {
+  const day = findDay(activeDay);
+  const box = document.getElementById("journalBody");
+  if (!day || !box) return;
+  box.innerHTML = day.html || "";
+  document.getElementById("journalTitle").textContent = dayLabel(day.date);
+  document.getElementById("journalPill").innerHTML =
+    day.date === todayISO() ? `<span class="j-today-pill">Today</span>` : "";
+  document.getElementById("jDatePick").value = day.date;
+  setJournalStatus(day.html ? "Saved" : "Empty page — start typing");
+  updateJournalCount();
+}
+function setJournalStatus(text) {
+  const el = document.getElementById("journalStatus");
+  if (el) el.textContent = text;
+}
+function updateJournalCount() {
+  const day = findDay(activeDay);
+  const el = document.getElementById("journalCount");
+  if (!day || !el) return;
+  const n = wordCount(dayText(day));
+  el.textContent = n ? plural(n, "word") : "";
+}
+function scheduleJournalSave() {
+  setJournalStatus("Saving…");
+  clearTimeout(jSaveTimer);
+  jSaveTimer = setTimeout(flushJournalSave, 600);
+}
+function flushJournalSave() {
+  clearTimeout(jSaveTimer);
+  const day = findDay(activeDay);
+  const box = document.getElementById("journalBody");
+  if (!day || !box) return;
+  const html = box.innerHTML.trim();
+  const clean = isBlankHtml(html) ? "" : sanitizeHtml(html);
+  if (clean === (day.html || "")) { setJournalStatus(day.html ? "Saved" : "Empty page — start typing"); return; }
+  day.html = clean;
+  day.updated = new Date().toISOString();
+  saveJournal();
+  setJournalStatus("Saved " + new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }));
+  updateJournalCount();
+  renderJournalDays();
+}
+function deleteDay() {
+  const day = findDay(activeDay);
+  if (!day) return;
+  if (!confirm(`Delete your notes for ${dayLabel(day.date)}? This cannot be undone.`)) return;
+  journal = journal.filter(x => x.date !== day.date);
+  saveJournal();
+  activeDay = ensureToday();
+  dayPinned = false;
+  loadDayIntoEditor();
+  render();
+}
+function journalMatches(day) {
+  const terms = queryTerms();
+  if (!terms.length) return true;
+  const hay = (day.date + " " + dayLabel(day.date) + " " + dayText(day)).toLowerCase();
+  return terms.some(t => hay.includes(t));
+}
+function renderJournalDays() {
+  const box = document.getElementById("journalDays");
+  if (!box) return;
+  const days = journal.slice().sort((a, b) => b.date.localeCompare(a.date)).filter(journalMatches);
+  if (!days.length) {
+    box.innerHTML = `<div class="site-check-empty">No days match “${escapeHtml(query)}”.</div>`;
+    return;
+  }
+  box.innerHTML = days.map(d => {
+    const n = wordCount(dayText(d));
+    const rel = relDay(d.date);
+    return `<div class="cat${d.date === activeDay ? " active" : ""}" onclick="openDay('${d.date}')">
+      <span>${escapeHtml(shortDay(d.date))}${rel ? `<span class="j-when">${escapeHtml(rel)}</span>` : ""}</span>
+      <span class="count">${n ? n + "w" : `<span class="j-empty-dot">empty</span>`}</span>
+    </div>`;
+  }).join("");
+}
+function renderJournal() {
+  renderJournalDays();
+  updateJournalCount();
+}
+function setMode(m) {
+  if (m === mode) return;
+  if (mode === "journal") flushJournalSave();
+  mode = m;
+  try { localStorage.setItem("kb_mode", m); } catch (e) {}
+  const journalOn = m === "journal";
+  document.getElementById("kbView").classList.toggle("hidden", journalOn);
+  document.getElementById("journalView").classList.toggle("hidden", !journalOn);
+  document.getElementById("navKb").classList.toggle("active", !journalOn);
+  document.getElementById("navJournal").classList.toggle("active", journalOn);
+  ["newEntryBtn", "sitesBtn", "compactBtn"].forEach(id =>
+    document.getElementById(id).classList.toggle("hidden", journalOn));
+  document.getElementById("search").placeholder =
+    journalOn ? "Search your journal…" : "Search guides, steps, links…";
+  if (journalOn) {
+    const t = ensureToday();
+    // Landing on the journal always opens today unless you were reading an older day
+    if (!activeDay || !findDay(activeDay) || (!dayPinned && activeDay !== t)) activeDay = t;
+    loadDayIntoEditor();
+  }
+  render();
+}
+
 /* ---------- Compact view ---------- */
 function toggleCompact() {
   compact = !compact;
@@ -1189,6 +1459,17 @@ function toggleTheme() {
 
 /* ---------- Wire up ---------- */
 document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+document.getElementById("journalBody").addEventListener("input", scheduleJournalSave);
+document.getElementById("journalBody").addEventListener("blur", flushJournalSave);
+window.addEventListener("beforeunload", () => { if (mode === "journal") flushJournalSave(); });
+// If the tab is left open overnight, come back to a fresh page for the new day
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || mode !== "journal") return;
+  const t = ensureToday();
+  // Rolled past midnight with the tab open: move to the new day, unless you pinned an older one
+  if (!dayPinned && activeDay !== t) openDay(t);
+  else render();
+});
 document.getElementById("fType").addEventListener("change", updateEditorMode);
 (function wireCategoryCombo() {
   const input = document.getElementById("fCategory");
@@ -1208,15 +1489,23 @@ document.getElementById("sitesOverlay").addEventListener("click", e => { if (e.t
 document.getElementById("siteUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSite(); } });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeEditor(); closeDiff(); closeCustom(); closeSites(); }
-  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA"
+      && !document.activeElement.isContentEditable) {
     e.preventDefault(); document.getElementById("search").focus();
   }
 });
 
 load();
 loadSites();
+loadJournal();
 loadSamples();
-render();
+ensureToday();
+(function initMode() {
+  let m;
+  try { m = localStorage.getItem("kb_mode"); } catch (e) {}
+  activeDay = todayISO();
+  if (m === "journal") setMode("journal"); else render();
+})();
 </script>
 </body>
 </html>
