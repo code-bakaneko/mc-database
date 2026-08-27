@@ -82,7 +82,7 @@
   @media (max-width: 1040px) { .page { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 720px) { main { grid-template-columns: 1fr; } main > aside { order: -1; } }
   aside {
-    align-self: start; position: sticky; top: 74px;
+    align-self: start; position: sticky; top: 128px;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
   }
@@ -350,6 +350,59 @@
   .hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
   .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
   .muted-btn { color: var(--muted); }
+  /* Quick log bar */
+  .quickbar { border-top: 1px solid var(--border); background: var(--panel-2); }
+  .qb-inner {
+    max-width: 1360px; margin: 0 auto; padding: 9px 20px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .qb-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); flex: none; }
+  .qb-inner input[type=text] {
+    padding: 8px 11px; font-size: 14px; width: auto; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 4px; color: var(--text);
+  }
+  .qb-inner input:focus { border-color: var(--accent); }
+  #qEid { flex: 0 0 130px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+  #qReason { flex: 1 1 240px; min-width: 160px; }
+  #qFirst, #qLast { flex: 0 1 130px; min-width: 100px; }
+  .qb-inner button { padding: 8px 13px; }
+  .qb-msg { font-size: 13px; color: var(--muted); flex: none; }
+  .qb-msg.ok { color: #2e7d32; font-weight: 600; }
+  [data-theme="dark"] .qb-msg.ok { color: #7ec98a; }
+  .qb-msg.warn { color: var(--accent); font-weight: 600; }
+
+  /* Ticket log */
+  .tk-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tk-stat { font-size: 13px; color: var(--muted); }
+  .tk-stat b { color: var(--text); font-size: 15px; }
+  .tk-summary button { margin-left: auto; font-size: 13px; padding: 6px 11px; }
+  .tk-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; margin-bottom: 8px;
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent-2);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .tk-row.done { border-left-color: #2e7d32; opacity: .62; }
+  .tk-row.done .tk-eid, .tk-row.done .tk-reason { text-decoration: line-through; }
+  .tk-row input[type=checkbox] { width: auto; margin: 3px 0 0; flex: none; cursor: pointer; }
+  .tk-main { flex: 1; min-width: 0; }
+  .tk-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+  .tk-eid { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-weight: 700; font-size: 15px; }
+  .tk-name { font-size: 14px; }
+  .tk-time { font-size: 12px; color: var(--muted); margin-left: auto; flex: none; }
+  .tk-reason { font-size: 14px; color: var(--text); margin-top: 3px; white-space: pre-wrap; }
+  .tk-reason.none { color: var(--muted); font-style: italic; }
+  .tk-acts { display: flex; gap: 6px; flex: none; }
+  .tk-acts button { padding: 4px 8px; font-size: 12px; }
+  .tk-edit { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .tk-edit .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tk-edit input[type=text] { padding: 7px 9px; font-size: 14px; flex: 1; min-width: 110px; }
+  .tk-edit .row.end { justify-content: flex-end; }
+  .nav-badge {
+    display: inline-block; min-width: 17px; padding: 0 5px; margin-left: 6px; border-radius: 9px;
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; text-align: center;
+  }
+  .viewnav button.active .nav-badge { background: rgba(255,255,255,.28); }
+
   /* Journal */
   .hidden { display: none !important; }
   .viewnav { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; flex: none; }
@@ -381,6 +434,7 @@
     <div class="viewnav">
       <button id="navKb" class="active" onclick="setMode('kb')">📚 Guides</button>
       <button id="navJournal" onclick="setMode('journal')">📓 Journal</button>
+      <button id="navTickets" onclick="setMode('tickets')">🎫 Tickets<span id="navTicketBadge"></span></button>
     </div>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -392,6 +446,17 @@
     <button class="icon-btn" id="compactBtn" title="Compact view (collapse guides)" onclick="toggleCompact()">▤</button>
     <button class="icon-btn" title="Toggle theme" onclick="toggleTheme()">🌓</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+  <div class="quickbar">
+    <div class="qb-inner">
+      <span class="qb-label">🎫 Log a visit</span>
+      <input type="text" id="qEid" placeholder="eID" autocomplete="off">
+      <input type="text" id="qReason" placeholder="Reason for visit" autocomplete="off">
+      <input type="text" id="qFirst" placeholder="First name (optional)" autocomplete="off">
+      <input type="text" id="qLast" placeholder="Last name (optional)" autocomplete="off">
+      <button class="primary" onclick="addTicket()">Log ⏎</button>
+      <span class="qb-msg" id="qbMsg"></span>
+    </div>
   </div>
 </header>
 
@@ -439,6 +504,24 @@
       <button class="del" onclick="deleteDay()">🗑️ Delete this day</button>
       <span class="j-count" id="journalCount"></span>
     </div>
+  </div>
+</main>
+
+<main id="ticketsView" class="hidden">
+  <aside>
+    <div class="aside-label">Go to a day</div>
+    <div class="j-picker"><input type="date" id="tDatePick" onchange="openTicketDay(this.value)"></div>
+    <div class="aside-divider"></div>
+    <div class="aside-label">Visit log</div>
+    <div id="ticketDays"></div>
+  </aside>
+  <div>
+    <div class="j-head">
+      <h2 id="ticketTitle"></h2>
+      <span id="ticketPill"></span>
+    </div>
+    <div class="tk-summary" id="ticketSummary"></div>
+    <div id="ticketList"></div>
   </div>
 </main>
 
@@ -610,11 +693,15 @@ const STORE_KEY = "kb_entries_v1";
 const SITES_KEY = "kb_sites_v1";
 const JOURNAL_KEY = "kb_journal_v1";
 const GROUPS_KEY = "kb_sitegroups_v1";
+const TICKETS_KEY = "kb_tickets_v1";
 let entries = [];
 let sites = [];
 let siteGroups = [];   // [{ id, name, color }] — user-defined, e.g. "Tracking", "Shipping"
 const GROUP_PALETTE = ["#1565c0", "#2e7d32", "#6a1b9a", "#cc0000", "#f79e1b", "#00838f", "#5d4037", "#37474f"];
 let journal = [];      // [{ date: "YYYY-MM-DD", html, updated }]
+let tickets = [];      // [{ id, date, eid, first, last, reason, created, done, doneAt }]
+let activeTicketDay = "";
+let editingTicketId = null;
 let activeDay = "";    // the day currently open in the journal editor
 let mode = "kb";       // "kb" | "journal"
 let jSaveTimer = null;
@@ -741,6 +828,16 @@ function loadSites() {
     { id: uid(), name: "Shipping Portal", url: "https://example.com/shipping", note: "Raise a shipment, print a label, chase a delivery.", groupId: g[2] ? g[2].id : "" }
   ];
   saveSites();
+}
+function loadTickets() {
+  try {
+    const raw = localStorage.getItem(TICKETS_KEY);
+    if (raw) tickets = JSON.parse(raw) || [];
+  } catch (e) { tickets = []; }
+}
+function saveTickets() {
+  try { localStorage.setItem(TICKETS_KEY, JSON.stringify(tickets)); }
+  catch (e) { alert("Could not save the ticket log — browser storage may be full."); }
 }
 function loadJournal() {
   try {
@@ -986,6 +1083,8 @@ function markChecked(id, silent) {
 
 function render() {
   renderSitesPanel();
+  renderTicketBadge();
+  if (mode === "tickets") return renderTickets();
   if (mode === "journal") return renderJournal();
   renderCategories();
   let list = entries.filter(matches);
@@ -1284,7 +1383,7 @@ function saveCustom() {
 /* ---------- Export / Import ---------- */
 function exportData() {
   if (mode === "journal") flushJournalSave();
-  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, siteGroups, journal };
+  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, siteGroups, journal, tickets };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1301,23 +1400,26 @@ function importData(ev) {
     try {
       const data = JSON.parse(reader.result);
       // Accept both the old format (a plain array of entries) and the new {entries, sites} object
-      let impEntries, impSites = null, impJournal = null, impGroups = null;
+      let impEntries, impSites = null, impJournal = null, impGroups = null, impTickets = null;
       if (Array.isArray(data)) { impEntries = data; }
       else if (data && Array.isArray(data.entries)) {
         impEntries = data.entries;
         impSites = Array.isArray(data.sites) ? data.sites : null;
         impJournal = Array.isArray(data.journal) ? data.journal : null;
         impGroups = Array.isArray(data.siteGroups) ? data.siteGroups : null;
+        impTickets = Array.isArray(data.tickets) ? data.tickets : null;
       }
       else throw new Error("bad format");
 
       const parts = impEntries.length + " entries" + (impSites ? ", " + impSites.length + " sites" : "") +
-        (impJournal ? ", " + plural(impJournal.length, "journal day") : "");
+        (impJournal ? ", " + plural(impJournal.length, "journal day") : "") +
+        (impTickets ? ", " + plural(impTickets.length, "logged visit") : "");
       if (confirm("Import " + parts + "?\n\nOK = replace everything\nCancel = merge with existing")) {
         entries = impEntries;
         if (impSites) sites = impSites;
         if (impGroups) siteGroups = impGroups;
         if (impJournal) journal = impJournal;
+        if (impTickets) tickets = impTickets;
       } else {
         const ids = new Set(entries.map(e => e.id));
         impEntries.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
@@ -1328,6 +1430,10 @@ function importData(ev) {
         if (impSites) {
           const sids = new Set(sites.map(s => s.id));
           impSites.forEach(s => { if (!sids.has(s.id)) sites.push(s); });
+        }
+        if (impTickets) {
+          const tids = new Set(tickets.map(t => t.id));
+          impTickets.forEach(t => { if (!tids.has(t.id)) tickets.push(t); });
         }
         if (impJournal) {
           impJournal.forEach(d => {
@@ -1342,7 +1448,7 @@ function importData(ev) {
         if (e.guide) e.guide = sanitizeHtml(e.guide);
       });
       journal.forEach(d => { if (d.html) d.html = sanitizeHtml(d.html); });
-      migrate(); saveGroups(); saveSites(); saveJournal(); save();
+      migrate(); saveGroups(); saveSites(); saveJournal(); saveTickets(); save();
       if (mode === "journal") { activeDay = ensureToday(); loadDayIntoEditor(); }
       render();
     } catch (e) { alert("That file could not be read as a valid backup."); }
@@ -1602,6 +1708,170 @@ function deleteSite(id) {
   refreshSitesUI();
 }
 
+/* ---------- Ticket log (who came by, and what for) ---------- */
+function ticketsOn(date) {
+  return tickets.filter(t => t.date === date).sort((a, b) => (a.created || "").localeCompare(b.created || ""));
+}
+function ticketDates() {
+  return Array.from(new Set(tickets.map(t => t.date))).sort((a, b) => b.localeCompare(a));
+}
+function openTickets(date) { return ticketsOn(date).filter(t => !t.done).length; }
+function fullName(t) { return [t.first, t.last].filter(Boolean).join(" "); }
+function timeOf(t) {
+  try { return new Date(t.created).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
+  catch (e) { return ""; }
+}
+function qbMessage(text, cls) {
+  const el = document.getElementById("qbMsg");
+  el.className = "qb-msg" + (cls ? " " + cls : "");
+  el.textContent = text;
+  clearTimeout(qbMessage.t);
+  if (text) qbMessage.t = setTimeout(() => { el.textContent = ""; el.className = "qb-msg"; }, 4000);
+}
+function addTicket() {
+  const eidEl = document.getElementById("qEid"), reasonEl = document.getElementById("qReason"),
+        firstEl = document.getElementById("qFirst"), lastEl = document.getElementById("qLast");
+  const eid = eidEl.value.trim();
+  if (!eid) { qbMessage("Enter an eID first.", "warn"); eidEl.focus(); return; }
+  const today = todayISO();
+  tickets.push({
+    id: uid(), date: today, eid,
+    first: firstEl.value.trim(), last: lastEl.value.trim(),
+    reason: reasonEl.value.trim(),
+    created: new Date().toISOString(), done: false, doneAt: ""
+  });
+  saveTickets();
+  eidEl.value = ""; reasonEl.value = ""; firstEl.value = ""; lastEl.value = "";
+  eidEl.focus();
+  // Visits always land on today, even while you are reading back through an older day
+  if (mode === "tickets" && activeTicketDay !== today) qbMessage("Logged " + eid + " on today's log.", "ok");
+  else qbMessage("Logged " + eid + " · " + plural(ticketsOn(today).length, "visit") + " today", "ok");
+  render();
+}
+function toggleTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  t.doneAt = t.done ? new Date().toISOString() : "";
+  saveTickets(); render();
+}
+function markDayComplete() {
+  const open = ticketsOn(activeTicketDay).filter(t => !t.done);
+  if (!open.length) return;
+  if (!confirm(`Mark all ${plural(open.length, "open visit")} on ${dayLabel(activeTicketDay)} as complete?`)) return;
+  const now = new Date().toISOString();
+  open.forEach(t => { t.done = true; t.doneAt = now; });
+  saveTickets(); render();
+}
+function deleteTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t || !confirm(`Delete the log entry for ${escapeHtml(t.eid)}?`)) return;
+  tickets = tickets.filter(x => x.id !== id);
+  saveTickets(); render();
+}
+function editTicket(id) { editingTicketId = id; render(); }
+function cancelTicketEdit() { editingTicketId = null; render(); }
+function saveTicketEdit(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  const eid = document.getElementById("tk-eid-" + id).value.trim();
+  if (!eid) { alert("An entry needs an eID."); return; }
+  t.eid = eid;
+  t.first = document.getElementById("tk-first-" + id).value.trim();
+  t.last = document.getElementById("tk-last-" + id).value.trim();
+  t.reason = document.getElementById("tk-reason-" + id).value.trim();
+  editingTicketId = null;
+  saveTickets(); render();
+}
+function openTicketDay(date) {
+  if (!date) return;
+  activeTicketDay = date;
+  editingTicketId = null;
+  render();
+}
+function ticketMatches(t) {
+  const terms = queryTerms();
+  if (!terms.length) return true;
+  const hay = (t.eid + " " + fullName(t) + " " + (t.reason || "")).toLowerCase();
+  return terms.some(x => hay.includes(x));
+}
+function renderTicketDays() {
+  const box = document.getElementById("ticketDays");
+  const dates = ticketDates().filter(d => !queryTerms().length || ticketsOn(d).some(ticketMatches));
+  if (!dates.includes(todayISO()) && !queryTerms().length) dates.unshift(todayISO());
+  if (!dates.length) { box.innerHTML = `<div class="site-check-empty">Nothing logged matches “${escapeHtml(query)}”.</div>`; return; }
+  box.innerHTML = dates.map(d => {
+    const all = ticketsOn(d).length, open = openTickets(d), rel = relDay(d);
+    return `<div class="cat${d === activeTicketDay ? " active" : ""}" onclick="openTicketDay('${d}')">
+      <span>${escapeHtml(shortDay(d))}${rel ? `<span class="j-when">${escapeHtml(rel)}</span>` : ""}</span>
+      <span class="count">${all ? all + (open ? " · " + open + " open" : " ✓") : "—"}</span>
+    </div>`;
+  }).join("");
+}
+function ticketRowHtml(t) {
+  if (t.id === editingTicketId) {
+    return `<div class="tk-row"><div class="tk-edit">
+      <div class="row">
+        <input type="text" id="tk-eid-${t.id}" value="${escapeHtml(t.eid)}" placeholder="eID" style="flex:0 0 130px">
+        <input type="text" id="tk-first-${t.id}" value="${escapeHtml(t.first || "")}" placeholder="First name">
+        <input type="text" id="tk-last-${t.id}" value="${escapeHtml(t.last || "")}" placeholder="Last name">
+      </div>
+      <input type="text" id="tk-reason-${t.id}" value="${escapeHtml(t.reason || "")}" placeholder="Reason for visit">
+      <div class="row end">
+        <button class="muted-btn" onclick="cancelTicketEdit()">Cancel</button>
+        <button class="primary" onclick="saveTicketEdit('${t.id}')">Save</button>
+      </div>
+    </div></div>`;
+  }
+  const name = fullName(t);
+  return `<div class="tk-row${t.done ? " done" : ""}">
+    <input type="checkbox" ${t.done ? "checked" : ""} title="Mark complete" onchange="toggleTicket('${t.id}')">
+    <div class="tk-main">
+      <div class="tk-top">
+        <span class="tk-eid">${highlight(t.eid, query)}</span>
+        ${name ? `<span class="tk-name">${highlight(name, query)}</span>` : ""}
+        <span class="tk-time">${escapeHtml(timeOf(t))}${t.done ? " · done" : ""}</span>
+      </div>
+      <div class="tk-reason${t.reason ? "" : " none"}">${t.reason ? highlight(t.reason, query) : "No reason noted"}</div>
+    </div>
+    <div class="tk-acts">
+      <button title="Edit" onclick="editTicket('${t.id}')">✏️</button>
+      <button class="del" title="Delete" onclick="deleteTicket('${t.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+function renderTicketBadge() {
+  const el = document.getElementById("navTicketBadge");
+  if (!el) return;
+  const open = openTickets(todayISO());
+  el.className = open ? "nav-badge" : "";
+  el.textContent = open ? open : "";
+  el.title = open ? plural(open, "open visit") + " today" : "";
+}
+function renderTickets() {
+  renderTicketDays();
+  const day = activeTicketDay || todayISO();
+  document.getElementById("ticketTitle").textContent = dayLabel(day);
+  document.getElementById("ticketPill").innerHTML =
+    day === todayISO() ? `<span class="j-today-pill">Today</span>` : "";
+  document.getElementById("tDatePick").value = day;
+
+  const all = ticketsOn(day);
+  const shown = all.filter(ticketMatches);
+  const open = all.filter(t => !t.done).length;
+  document.getElementById("ticketSummary").innerHTML =
+    `<span class="tk-stat"><b>${all.length}</b> logged</span>
+     <span class="tk-stat"><b>${open}</b> open</span>
+     <span class="tk-stat"><b>${all.length - open}</b> complete</span>
+     ${open ? `<button onclick="markDayComplete()">✓ Mark all complete</button>` : ""}`;
+
+  const list = document.getElementById("ticketList");
+  list.innerHTML = shown.length
+    ? shown.map(ticketRowHtml).join("")
+    : `<div class="empty"><p>${all.length ? "Nothing here matches your search." :
+        "No visits logged for this day.<br>Use the bar at the top to log one."}</p></div>`;
+}
+
 /* ---------- Journal (daily training notes) ---------- */
 function dayLabel(iso) {
   try { return parseISO(iso).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
@@ -1718,25 +1988,34 @@ function renderJournal() {
   renderJournalDays();
   updateJournalCount();
 }
+const VIEWS = { kb: "kbView", journal: "journalView", tickets: "ticketsView" };
+const NAVS = { kb: "navKb", journal: "navJournal", tickets: "navTickets" };
+const PLACEHOLDERS = {
+  kb: "Search guides, steps, links…",
+  journal: "Search your journal…",
+  tickets: "Search the visit log by eID, name or reason…"
+};
 function setMode(m) {
   if (m === mode) return;
   if (mode === "journal") flushJournalSave();
   mode = m;
   try { localStorage.setItem("kb_mode", m); } catch (e) {}
-  const journalOn = m === "journal";
-  document.getElementById("kbView").classList.toggle("hidden", journalOn);
-  document.getElementById("journalView").classList.toggle("hidden", !journalOn);
-  document.getElementById("navKb").classList.toggle("active", !journalOn);
-  document.getElementById("navJournal").classList.toggle("active", journalOn);
+  Object.keys(VIEWS).forEach(k => {
+    document.getElementById(VIEWS[k]).classList.toggle("hidden", k !== m);
+    document.getElementById(NAVS[k]).classList.toggle("active", k === m);
+  });
   ["newEntryBtn", "compactBtn"].forEach(id =>
-    document.getElementById(id).classList.toggle("hidden", journalOn));
-  document.getElementById("search").placeholder =
-    journalOn ? "Search your journal…" : "Search guides, steps, links…";
-  if (journalOn) {
+    document.getElementById(id).classList.toggle("hidden", m !== "kb"));
+  document.getElementById("search").placeholder = PLACEHOLDERS[m];
+  if (m === "journal") {
     const t = ensureToday();
     // Landing on the journal always opens today unless you were reading an older day
     if (!activeDay || !findDay(activeDay) || (!dayPinned && activeDay !== t)) activeDay = t;
     loadDayIntoEditor();
+  }
+  if (m === "tickets") {
+    editingTicketId = null;
+    if (!activeTicketDay) activeTicketDay = todayISO();
   }
   render();
 }
@@ -1775,6 +2054,10 @@ function toggleTheme() {
 
 /* ---------- Wire up ---------- */
 document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+["qEid", "qReason", "qFirst", "qLast"].forEach(id =>
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addTicket(); }
+  }));
 document.getElementById("journalBody").addEventListener("input", scheduleJournalSave);
 document.getElementById("journalBody").addEventListener("blur", flushJournalSave);
 window.addEventListener("beforeunload", () => { if (mode === "journal") flushJournalSave(); });
@@ -1816,13 +2099,15 @@ load();
 loadGroups();
 loadSites();
 loadJournal();
+loadTickets();
 loadSamples();
 ensureToday();
+activeTicketDay = todayISO();
 (function initMode() {
   let m;
   try { m = localStorage.getItem("kb_mode"); } catch (e) {}
   activeDay = todayISO();
-  if (m === "journal") setMode("journal"); else render();
+  if (m === "journal" || m === "tickets") setMode(m); else render();
 })();
 </script>
 </body>
