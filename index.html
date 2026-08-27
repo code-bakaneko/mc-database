@@ -372,6 +372,11 @@
   .qb-msg.warn { color: var(--accent); font-weight: 600; }
 
   /* Ticket log */
+  .day-nav { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; flex: none; }
+  .day-nav button { border: none; border-radius: 0; background: var(--panel-2); padding: 5px 11px; font-size: 14px; }
+  .day-nav button + button { border-left: 1px solid var(--border); }
+  .day-nav button:hover:not(:disabled) { background: var(--accent); color: #fff; }
+  .day-nav button:disabled { opacity: .38; cursor: default; }
   .tk-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
   .tk-stat { font-size: 13px; color: var(--muted); }
   .tk-stat b { color: var(--text); font-size: 15px; }
@@ -517,6 +522,11 @@
   </aside>
   <div>
     <div class="j-head">
+      <div class="day-nav">
+        <button id="tPrev" title="Older day (←)" onclick="stepTicketDay(1)">‹</button>
+        <button id="tToday" title="Jump to today" onclick="openTicketDay(todayISO())">Today</button>
+        <button id="tNext" title="Newer day (→)" onclick="stepTicketDay(-1)">›</button>
+      </div>
       <h2 id="ticketTitle"></h2>
       <span id="ticketPill"></span>
     </div>
@@ -1780,8 +1790,27 @@ function saveTicketEdit(id) {
   t.first = document.getElementById("tk-first-" + id).value.trim();
   t.last = document.getElementById("tk-last-" + id).value.trim();
   t.reason = document.getElementById("tk-reason-" + id).value.trim();
+  const moved = document.getElementById("tk-date-" + id).value;
+  if (moved && moved !== t.date) {
+    t.date = moved;
+    activeTicketDay = moved;   // follow the entry so you can see it landed
+  }
   editingTicketId = null;
   saveTickets(); render();
+}
+function navDays() {
+  // Every day that has visits, plus today and whatever day you are looking at
+  const set = new Set(tickets.map(t => t.date));
+  set.add(todayISO());
+  if (activeTicketDay) set.add(activeTicketDay);
+  return Array.from(set).sort((a, b) => b.localeCompare(a));   // newest first
+}
+function stepTicketDay(dir) {
+  // dir 1 = older, -1 = newer. Skips days with nothing logged.
+  const days = navDays();
+  const i = days.indexOf(activeTicketDay || todayISO());
+  const next = days[i + dir];
+  if (next) openTicketDay(next);
 }
 function openTicketDay(date) {
   if (!date) return;
@@ -1817,6 +1846,10 @@ function ticketRowHtml(t) {
         <input type="text" id="tk-last-${t.id}" value="${escapeHtml(t.last || "")}" placeholder="Last name">
       </div>
       <input type="text" id="tk-reason-${t.id}" value="${escapeHtml(t.reason || "")}" placeholder="Reason for visit">
+      <div class="row">
+        <label style="margin:0;align-self:center;">Day</label>
+        <input type="date" id="tk-date-${t.id}" value="${escapeHtml(t.date)}" style="flex:0 0 auto;padding:7px 9px;">
+      </div>
       <div class="row end">
         <button class="muted-btn" onclick="cancelTicketEdit()">Cancel</button>
         <button class="primary" onclick="saveTicketEdit('${t.id}')">Save</button>
@@ -1855,6 +1888,10 @@ function renderTickets() {
   document.getElementById("ticketPill").innerHTML =
     day === todayISO() ? `<span class="j-today-pill">Today</span>` : "";
   document.getElementById("tDatePick").value = day;
+  const days = navDays(), i = days.indexOf(day);
+  document.getElementById("tPrev").disabled = i < 0 || i >= days.length - 1;
+  document.getElementById("tNext").disabled = i <= 0;
+  document.getElementById("tToday").disabled = day === todayISO();
 
   const all = ticketsOn(day);
   const shown = all.filter(ticketMatches);
@@ -2089,9 +2126,14 @@ document.getElementById("sitesOverlay").addEventListener("click", e => { if (e.t
   .addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSite(); } }));
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeEditor(); closeDiff(); closeCustom(); closeSites(); }
-  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA"
-      && !document.activeElement.isContentEditable) {
+  const typing = document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA"
+    || document.activeElement.isContentEditable;
+  if (e.key === "/" && !typing) {
     e.preventDefault(); document.getElementById("search").focus();
+  }
+  if (mode === "tickets" && !typing && !editingTicketId) {
+    if (e.key === "ArrowLeft") { e.preventDefault(); stepTicketDay(1); }
+    if (e.key === "ArrowRight") { e.preventDefault(); stepTicketDay(-1); }
   }
 });
 
