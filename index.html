@@ -277,10 +277,43 @@
   .site-check-list label:hover { background: var(--panel); }
   .site-check-list input[type=checkbox] { width: auto; margin: 0; }
   .site-check-empty { color: var(--muted); font-size: 13px; padding: 6px; }
-  .site-row { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; }
+  .site-row { padding: 9px 11px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; }
+  .site-row .s-top { display: flex; align-items: center; gap: 10px; }
   .site-row .s-name { font-weight: 600; flex: none; }
   .site-row .s-url { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .site-row button { padding: 5px 9px; }
+  .site-row button { padding: 5px 9px; flex: none; }
+  .site-note { font-size: 13px; color: var(--muted); margin-top: 5px; white-space: pre-wrap; }
+  .site-note.none { font-style: italic; opacity: .75; }
+  .site-edit { display: flex; flex-direction: column; gap: 6px; }
+  .site-edit .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .site-edit input[type=text] { padding: 7px 9px; font-size: 14px; }
+  .site-edit .row input.s-in-name { flex: 1; min-width: 120px; }
+  .site-edit .row input.s-in-url { flex: 2; min-width: 160px; }
+  .site-edit .row.end { justify-content: flex-end; }
+  .site-form { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; }
+  .grp-box { border: 1px solid var(--border); border-radius: 4px; padding: 8px; background: var(--panel-2); }
+  .grp-row { display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
+  .grp-row input[type=color] {
+    width: 30px; height: 26px; padding: 0; flex: none; cursor: pointer;
+    background: none; border: 1px solid var(--border); border-radius: 4px;
+  }
+  .grp-row input[type=text] { flex: 1; padding: 6px 9px; font-size: 14px; background: var(--panel); }
+  .grp-row .grp-count { font-size: 12px; color: var(--muted); flex: none; }
+  .grp-row button { padding: 4px 8px; flex: none; }
+  .grp-add { border-top: 1px dashed var(--border); margin-top: 6px; padding-top: 8px; }
+  .grp-head {
+    display: flex; align-items: center; gap: 8px; margin: 14px 0 6px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+  }
+  .grp-head:first-child { margin-top: 0; }
+  .grp-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+  .site-row { border-left-width: 3px; }
+  .links a.site-link { border-left-width: 3px; }
+  .site-check-list .grp-head { margin: 8px 4px 3px; }
+  .site-check-list .grp-head:first-child { margin-top: 2px; }
+  .site-check-list label { align-items: flex-start; }
+  .site-check-list input[type=checkbox] { margin-top: 3px; }
+  .site-check-note { display: block; font-size: 12px; color: var(--muted); }
   .links a.site-link { border-color: var(--link); color: var(--link); font-weight: 600; }
   textarea { resize: vertical; min-height: 90px; }
   .hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
@@ -500,17 +533,28 @@
   <div class="modal">
     <h2>🌐 My Sites</h2>
     <div class="hint" style="margin-bottom:12px;">Save the portals you log into often — assigning, tracking, shipping, etc. Then tick them on any entry from the New Entry form.</div>
+    <label style="margin-top:0;">Groups <span style="font-weight:400;">(sort your sites by the kind of task they're for)</span></label>
+    <div class="grp-box" id="groupsBox"></div>
+    <label>Your sites</label>
     <div id="sitesList"></div>
-    <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; align-items:flex-end;">
-      <div style="flex:1; min-width:130px;">
-        <label style="margin-top:0;">Name</label>
-        <input type="text" id="siteName" placeholder="e.g. Shipping Portal">
+    <div class="site-form">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:130px;">
+          <label style="margin-top:0;">Name</label>
+          <input type="text" id="siteName" placeholder="e.g. Shipping Portal">
+        </div>
+        <div style="flex:2; min-width:170px;">
+          <label style="margin-top:0;">URL</label>
+          <input type="text" id="siteUrl" placeholder="https://…">
+        </div>
       </div>
-      <div style="flex:2; min-width:170px;">
-        <label style="margin-top:0;">URL</label>
-        <input type="text" id="siteUrl" placeholder="https://…">
+      <label>What is it used for?</label>
+      <input type="text" id="siteNote" placeholder="e.g. Track a shipment, print labels, check delivery status">
+      <label>Group</label>
+      <select id="siteGroup"></select>
+      <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+        <button class="primary" onclick="addSite()">Add site</button>
       </div>
-      <button class="primary" onclick="addSite()">Add</button>
     </div>
     <div class="modal-actions">
       <button class="primary" onclick="closeSites()">Done</button>
@@ -522,8 +566,11 @@
 const STORE_KEY = "kb_entries_v1";
 const SITES_KEY = "kb_sites_v1";
 const JOURNAL_KEY = "kb_journal_v1";
+const GROUPS_KEY = "kb_sitegroups_v1";
 let entries = [];
 let sites = [];
+let siteGroups = [];   // [{ id, name, color }] — user-defined, e.g. "Tracking", "Shipping"
+const GROUP_PALETTE = ["#1565c0", "#2e7d32", "#6a1b9a", "#cc0000", "#f79e1b", "#00838f", "#5d4037", "#37474f"];
 let journal = [];      // [{ date: "YYYY-MM-DD", html, updated }]
 let activeDay = "";    // the day currently open in the journal editor
 let mode = "kb";       // "kb" | "journal"
@@ -644,10 +691,11 @@ function loadSites() {
     const raw = localStorage.getItem(SITES_KEY);
     if (raw) { sites = JSON.parse(raw); return; }
   } catch (e) {}
+  const g = siteGroups;
   sites = [
-    { id: uid(), name: "Assignment Portal", url: "https://example.com/assign" },
-    { id: uid(), name: "Tracking System", url: "https://example.com/track" },
-    { id: uid(), name: "Shipping Portal", url: "https://example.com/shipping" }
+    { id: uid(), name: "Assignment Portal", url: "https://example.com/assign", note: "Pick up and assign tickets to yourself or the team.", groupId: g[0] ? g[0].id : "" },
+    { id: uid(), name: "Tracking System", url: "https://example.com/track", note: "Look up the status and history of an existing case.", groupId: g[1] ? g[1].id : "" },
+    { id: uid(), name: "Shipping Portal", url: "https://example.com/shipping", note: "Raise a shipment, print a label, chase a delivery.", groupId: g[2] ? g[2].id : "" }
   ];
   saveSites();
 }
@@ -661,7 +709,25 @@ function saveJournal() {
   try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal)); }
   catch (e) { alert("Could not save your journal — browser storage may be full."); }
 }
+function loadGroups() {
+  try {
+    const raw = localStorage.getItem(GROUPS_KEY);
+    if (raw) { siteGroups = JSON.parse(raw) || []; return; }
+  } catch (e) {}
+  siteGroups = [
+    { id: uid(), name: "Ticket handling", color: "#1565c0" },
+    { id: uid(), name: "Lookups & tracking", color: "#6a1b9a" },
+    { id: uid(), name: "Logistics", color: "#2e7d32" }
+  ];
+  saveGroups();
+}
+function saveGroups() {
+  try { localStorage.setItem(GROUPS_KEY, JSON.stringify(siteGroups)); } catch (e) {}
+}
+function groupOf(site) { return siteGroups.find(g => g.id === (site && site.groupId)) || null; }
+function groupColor(site) { const g = groupOf(site); return g ? g.color : "var(--border)"; }
 function saveSites() {
+  sites.forEach(s => { if (s.note === undefined) s.note = ""; if (s.groupId === undefined) s.groupId = ""; });
   try { localStorage.setItem(SITES_KEY, JSON.stringify(sites)); } catch (e) {}
 }
 function escapeHtml(s) {
@@ -899,7 +965,7 @@ function render() {
   }
   cards.innerHTML = list.map(e => {
     const siteLinks = (e.siteIds || []).map(id => sites.find(s => s.id === id)).filter(Boolean).map(s =>
-      `<a class="site-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">🌐 ${escapeHtml(s.name)}</a>`).join("");
+      `<a class="site-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml((s.note || "").trim() || s.url)}">🌐 ${escapeHtml(s.name)}</a>`).join("");
     const links = siteLinks + (e.links || []).filter(l => l[1] && l[1] !== "#").map(l =>
       `<a href="${escapeHtml(l[1])}" target="_blank" rel="noopener">🔗 ${escapeHtml(l[0] || l[1])}</a>`).join("");
     const type = e.type || "Custom";
@@ -1174,7 +1240,7 @@ function saveCustom() {
 /* ---------- Export / Import ---------- */
 function exportData() {
   if (mode === "journal") flushJournalSave();
-  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, journal };
+  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, siteGroups, journal };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1191,12 +1257,13 @@ function importData(ev) {
     try {
       const data = JSON.parse(reader.result);
       // Accept both the old format (a plain array of entries) and the new {entries, sites} object
-      let impEntries, impSites = null, impJournal = null;
+      let impEntries, impSites = null, impJournal = null, impGroups = null;
       if (Array.isArray(data)) { impEntries = data; }
       else if (data && Array.isArray(data.entries)) {
         impEntries = data.entries;
         impSites = Array.isArray(data.sites) ? data.sites : null;
         impJournal = Array.isArray(data.journal) ? data.journal : null;
+        impGroups = Array.isArray(data.siteGroups) ? data.siteGroups : null;
       }
       else throw new Error("bad format");
 
@@ -1205,10 +1272,15 @@ function importData(ev) {
       if (confirm("Import " + parts + "?\n\nOK = replace everything\nCancel = merge with existing")) {
         entries = impEntries;
         if (impSites) sites = impSites;
+        if (impGroups) siteGroups = impGroups;
         if (impJournal) journal = impJournal;
       } else {
         const ids = new Set(entries.map(e => e.id));
         impEntries.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
+        if (impGroups) {
+          const gids = new Set(siteGroups.map(g => g.id));
+          impGroups.forEach(g => { if (!gids.has(g.id)) siteGroups.push(g); });
+        }
         if (impSites) {
           const sids = new Set(sites.map(s => s.id));
           impSites.forEach(s => { if (!sids.has(s.id)) sites.push(s); });
@@ -1226,7 +1298,7 @@ function importData(ev) {
         if (e.guide) e.guide = sanitizeHtml(e.guide);
       });
       journal.forEach(d => { if (d.html) d.html = sanitizeHtml(d.html); });
-      migrate(); saveSites(); saveJournal(); save();
+      migrate(); saveGroups(); saveSites(); saveJournal(); save();
       if (mode === "journal") { activeDay = ensureToday(); loadDayIntoEditor(); }
       render();
     } catch (e) { alert("That file could not be read as a valid backup."); }
@@ -1243,47 +1315,188 @@ function renderSiteChecks(selected) {
     box.innerHTML = `<div class="site-check-empty">No saved sites yet — click “Manage my sites” below to add your portals.</div>`;
     return;
   }
-  box.innerHTML = sites.map(s =>
-    `<label><input type="checkbox" value="${s.id}" ${selected.includes(s.id) ? "checked" : ""}> ${escapeHtml(s.name)}</label>`
-  ).join("");
+  const one = s =>
+    `<label><input type="checkbox" value="${s.id}" ${selected.includes(s.id) ? "checked" : ""}>
+       <span><span class="grp-dot" style="background:${escapeHtml(groupColor(s))};margin-right:6px"></span>${escapeHtml(s.name)}${(s.note || "").trim() ? `<span class="site-check-note">${escapeHtml(s.note)}</span>` : ""}</span>
+     </label>`;
+  let html = "";
+  siteGroups.forEach(g => {
+    const mine = sites.filter(s => s.groupId === g.id);
+    if (mine.length) html += groupHeadHtml(g) + mine.map(one).join("");
+  });
+  const loose = sites.filter(s => !groupOf(s));
+  if (loose.length) {
+    html += (siteGroups.length ? `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Ungrouped</div>` : "") +
+      loose.map(one).join("");
+  }
+  box.innerHTML = html;
 }
 function refreshSiteChecksKeepSelection() {
   const selected = Array.from(document.querySelectorAll("#siteChecks input:checked")).map(c => c.value);
   renderSiteChecks(selected);
 }
-function openSites() { renderSitesList(); document.getElementById("sitesOverlay").classList.add("show"); }
+function openSites() {
+  editingSiteId = null;
+  renderGroups();
+  renderSitesList();
+  document.getElementById("siteGroup").innerHTML =
+    groupSelectHtml("").replace(/^<select[^>]*>|<\/select>$/g, "");
+  document.getElementById("sitesOverlay").classList.add("show");
+}
 function closeSites() { document.getElementById("sitesOverlay").classList.remove("show"); }
+let editingSiteId = null;
+function renderGroups() {
+  const box = document.getElementById("groupsBox");
+  if (!box) return;
+  const rows = siteGroups.map(g => {
+    const n = sites.filter(s => s.groupId === g.id).length;
+    return `<div class="grp-row">
+      <input type="color" value="${escapeHtml(g.color)}" title="Group colour" onchange="setGroupColor('${g.id}', this.value)">
+      <input type="text" value="${escapeHtml(g.name)}" placeholder="Group name" onchange="renameGroup('${g.id}', this.value)">
+      <span class="grp-count">${n ? plural(n, "site") : "empty"}</span>
+      <button class="del" title="Delete group" onclick="deleteGroup('${g.id}')">🗑️</button>
+    </div>`;
+  }).join("");
+  const nextColor = GROUP_PALETTE[siteGroups.length % GROUP_PALETTE.length];
+  box.innerHTML = (rows || `<div class="site-check-empty">No groups yet — add one below.</div>`) +
+    `<div class="grp-row grp-add">
+       <input type="color" id="newGroupColor" value="${nextColor}" title="Group colour">
+       <input type="text" id="newGroupName" placeholder="New group, e.g. Password resets">
+       <button class="primary" onclick="addGroup()">Add group</button>
+     </div>`;
+}
+function addGroup() {
+  const nameEl = document.getElementById("newGroupName");
+  const name = nameEl.value.trim();
+  if (!name) { alert("Give the group a name first."); return; }
+  siteGroups.push({ id: uid(), name, color: document.getElementById("newGroupColor").value });
+  saveGroups();
+  nameEl.value = "";
+  refreshSitesUI();
+  nameEl.focus();
+}
+function renameGroup(id, name) {
+  const g = siteGroups.find(x => x.id === id);
+  if (!g) return;
+  if (!name.trim()) { refreshSitesUI(); return; }
+  g.name = name.trim();
+  saveGroups(); refreshSitesUI();
+}
+function setGroupColor(id, color) {
+  const g = siteGroups.find(x => x.id === id);
+  if (!g) return;
+  g.color = color;
+  saveGroups(); refreshSitesUI();
+}
+function deleteGroup(id) {
+  const g = siteGroups.find(x => x.id === id);
+  if (!g) return;
+  const n = sites.filter(s => s.groupId === id).length;
+  if (!confirm(`Delete the “${g.name}” group?` + (n ? `\n\n${plural(n, "site")} will stay, just ungrouped.` : ""))) return;
+  siteGroups = siteGroups.filter(x => x.id !== id);
+  sites.forEach(s => { if (s.groupId === id) s.groupId = ""; });
+  saveGroups(); saveSites(); refreshSitesUI();
+}
+function groupSelectHtml(selectedId, id) {
+  const opts = siteGroups.map(g =>
+    `<option value="${g.id}" ${g.id === selectedId ? "selected" : ""}>${escapeHtml(g.name)}</option>`).join("");
+  return `<select ${id ? `id="${id}"` : ""}><option value="">— No group —</option>${opts}</select>`;
+}
+/* Groups, site rows and the entry-form checklist all move together */
+function refreshSitesUI() {
+  renderGroups();
+  renderSitesList();
+  const sel = document.getElementById("siteGroup");
+  if (sel) { const keep = sel.value; sel.innerHTML = groupSelectHtml(keep).replace(/^<select[^>]*>|<\/select>$/g, ""); sel.value = keep; }
+  if (document.getElementById("overlay").classList.contains("show")) refreshSiteChecksKeepSelection();
+  render();
+}
 function renderSitesList() {
   const box = document.getElementById("sitesList");
   if (!sites.length) { box.innerHTML = `<div class="site-check-empty">No sites yet. Add your first one below.</div>`; return; }
-  box.innerHTML = sites.map(s =>
-    `<div class="site-row">
+  const row = s => s.id === editingSiteId ? siteEditRow(s) : siteViewRow(s);
+  let html = "";
+  siteGroups.forEach(g => {
+    const mine = sites.filter(s => s.groupId === g.id);
+    if (!mine.length) return;
+    html += groupHeadHtml(g) + mine.map(row).join("");
+  });
+  const loose = sites.filter(s => !groupOf(s));
+  if (loose.length) {
+    html += (siteGroups.length ? `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Ungrouped</div>` : "") +
+      loose.map(row).join("");
+  }
+  box.innerHTML = html;
+  if (editingSiteId) {
+    const first = box.querySelector(".s-in-name");
+    if (first) first.focus();
+  }
+}
+function groupHeadHtml(g) {
+  return `<div class="grp-head"><span class="grp-dot" style="background:${escapeHtml(g.color)}"></span>${escapeHtml(g.name)}</div>`;
+}
+function siteViewRow(s) {
+  const note = (s.note || "").trim();
+  return `<div class="site-row" style="border-left-color:${escapeHtml(groupColor(s))}">
+     <div class="s-top">
        <span class="s-name">${escapeHtml(s.name)}</span>
        <span class="s-url">${escapeHtml(s.url)}</span>
+       <button title="Edit this site" onclick="editSite('${s.id}')">✏️</button>
        <button class="del" title="Remove" onclick="deleteSite('${s.id}')">🗑️</button>
-     </div>`).join("");
+     </div>
+     <div class="site-note${note ? "" : " none"}">${note ? escapeHtml(note) : "No description yet — click ✏️ to say what it's used for."}</div>
+   </div>`;
+}
+function siteEditRow(s) {
+  return `<div class="site-row site-edit">
+     <div class="row">
+       <input type="text" class="s-in-name" id="edit-name-${s.id}" value="${escapeHtml(s.name)}" placeholder="Name">
+       <input type="text" class="s-in-url" id="edit-url-${s.id}" value="${escapeHtml(s.url)}" placeholder="https://…">
+     </div>
+     <input type="text" id="edit-note-${s.id}" value="${escapeHtml(s.note || "")}" placeholder="What is it used for?">
+     <div class="row">${groupSelectHtml(s.groupId || "", "edit-group-" + s.id)}</div>
+     <div class="row end">
+       <button class="muted-btn" onclick="cancelEditSite()">Cancel</button>
+       <button class="primary" onclick="saveSiteEdit('${s.id}')">Save</button>
+     </div>
+   </div>`;
+}
+function editSite(id) { editingSiteId = id; renderSitesList(); }
+function cancelEditSite() { editingSiteId = null; renderSitesList(); }
+function saveSiteEdit(id) {
+  const s = sites.find(x => x.id === id);
+  if (!s) return;
+  const name = document.getElementById("edit-name-" + id).value.trim();
+  let url = document.getElementById("edit-url-" + id).value.trim();
+  if (!name || !url) { alert("A site needs both a name and a URL."); return; }
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  s.name = name;
+  s.url = url;
+  s.note = document.getElementById("edit-note-" + id).value.trim();
+  s.groupId = document.getElementById("edit-group-" + id).value;
+  saveSites();
+  editingSiteId = null;
+  refreshSitesUI();
 }
 function addSite() {
-  const nameEl = document.getElementById("siteName"), urlEl = document.getElementById("siteUrl");
+  const nameEl = document.getElementById("siteName"), urlEl = document.getElementById("siteUrl"),
+        noteEl = document.getElementById("siteNote");
   const name = nameEl.value.trim();
   let url = urlEl.value.trim();
   if (!name || !url) { alert("Enter both a name and a URL."); return; }
   if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-  sites.push({ id: uid(), name, url });
+  sites.push({ id: uid(), name, url, note: noteEl.value.trim(), groupId: document.getElementById("siteGroup").value });
   saveSites();
-  nameEl.value = ""; urlEl.value = ""; nameEl.focus();
-  renderSitesList();
-  if (document.getElementById("overlay").classList.contains("show")) refreshSiteChecksKeepSelection();
-  render();
+  nameEl.value = ""; urlEl.value = ""; noteEl.value = "";
+  refreshSitesUI();
+  nameEl.focus();
 }
 function deleteSite(id) {
   const s = sites.find(x => x.id === id);
   if (!s || !confirm(`Remove “${s.name}” from your saved sites?`)) return;
   sites = sites.filter(x => x.id !== id);
   saveSites();
-  renderSitesList();
-  if (document.getElementById("overlay").classList.contains("show")) refreshSiteChecksKeepSelection();
-  render();
+  refreshSitesUI();
 }
 
 /* ---------- Journal (daily training notes) ---------- */
@@ -1486,7 +1699,8 @@ document.getElementById("overlay").addEventListener("click", e => { if (e.target
 document.getElementById("diffOverlay").addEventListener("click", e => { if (e.target.id === "diffOverlay") closeDiff(); });
 document.getElementById("customOverlay").addEventListener("click", e => { if (e.target.id === "customOverlay") closeCustom(); });
 document.getElementById("sitesOverlay").addEventListener("click", e => { if (e.target.id === "sitesOverlay") closeSites(); });
-document.getElementById("siteUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSite(); } });
+["siteUrl", "siteNote"].forEach(id => document.getElementById(id)
+  .addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addSite(); } }));
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { closeEditor(); closeDiff(); closeCustom(); closeSites(); }
   if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA"
@@ -1496,6 +1710,7 @@ document.addEventListener("keydown", e => {
 });
 
 load();
+loadGroups();
 loadSites();
 loadJournal();
 loadSamples();
