@@ -45,7 +45,7 @@
     box-shadow: var(--shadow);
   }
   .bar {
-    max-width: 1360px; margin: 0 auto; padding: 12px 20px;
+    max-width: 1410px; margin: 0 auto; padding: 12px 20px;
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   }
   .bar > button { flex: none; white-space: nowrap; }
@@ -77,11 +77,11 @@
   button.primary:hover { filter: brightness(1.08); }
   .icon-btn { padding: 9px 11px; }
   .page {
-    max-width: 1360px; margin: 0 auto; padding: 20px; gap: 20px;
-    display: grid; grid-template-columns: minmax(0, 1fr) 250px; align-items: start;
+    max-width: 1410px; margin: 0 auto; padding: 20px; gap: 20px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start;
   }
   main { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
-  @media (max-width: 1040px) { .page { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 1090px) { .page { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 720px) { main { grid-template-columns: 1fr; } main > aside { order: -1; } }
   aside {
     align-self: start; position: sticky; top: 128px;
@@ -110,10 +110,7 @@
   }
   .sp-site:hover { background: var(--panel); border-color: var(--link); border-left-color: inherit; }
   .sp-name { display: block; font-size: 14px; font-weight: 600; }
-  .sp-note {
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
-    font-size: 12px; color: var(--muted); margin-top: 2px;
-  }
+  .sp-note { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
   .sp-empty { font-size: 13px; color: var(--muted); padding: 8px 4px; }
   .cards { display: flex; flex-direction: column; gap: 14px; }
   .card {
@@ -361,7 +358,7 @@
   /* Quick log bar */
   .quickbar { border-top: 1px solid var(--border); background: var(--panel-2); }
   .qb-inner {
-    max-width: 1360px; margin: 0 auto; padding: 9px 20px;
+    max-width: 1410px; margin: 0 auto; padding: 9px 20px;
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
   .qb-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); flex: none; }
