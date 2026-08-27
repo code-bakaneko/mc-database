@@ -60,12 +60,13 @@
     flex: 1 1 150px; min-width: 0; position: relative;
   }
   .search input {
-    width: 100%; padding: 11px 14px 11px 40px; font-size: 15px;
+    width: 100%; padding: 11px 14px; font-size: 15px;
     border: 1px solid var(--border); border-radius: 4px;
     background: var(--panel-2); color: var(--text); outline: none;
+    text-overflow: ellipsis;
   }
   .search input:focus { border-color: var(--accent); }
-  .search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); opacity: .5; }
+  .search input::placeholder { color: var(--muted); opacity: .85; }
   button {
     font: inherit; cursor: pointer; border: 1px solid var(--border);
     background: var(--panel-2); color: var(--text);
@@ -466,7 +467,6 @@
       <button id="navTickets" onclick="setMode('tickets')">🎫 Tickets<span id="navTicketBadge"></span></button>
     </div>
     <div class="search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="search" type="text" placeholder="Search guides, steps, links…" autocomplete="off">
     </div>
     <button class="primary" id="newEntryBtn" onclick="openEditor()">+ New Entry</button>
