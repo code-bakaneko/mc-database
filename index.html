@@ -399,6 +399,12 @@
   .tk-time { font-size: 12px; color: var(--muted); margin-left: auto; flex: none; }
   .tk-reason { font-size: 14px; color: var(--text); margin-top: 3px; white-space: pre-wrap; }
   .tk-reason.none { color: var(--muted); font-style: italic; }
+  .copy-btn {
+    border: none; background: none; padding: 0 3px; margin-left: 2px; cursor: pointer;
+    font-size: 12px; line-height: 1; opacity: .45; vertical-align: middle; color: var(--muted);
+  }
+  .copy-btn:hover { opacity: 1; border: none; }
+  .copy-btn.copied { opacity: 1; color: #2e7d32; }
   .tk-acts { display: flex; gap: 6px; flex: none; }
   .tk-acts button { padding: 4px 8px; font-size: 12px; }
   .tk-edit { display: flex; flex-direction: column; gap: 6px; flex: 1; }
@@ -411,6 +417,20 @@
   }
   .nav-badge:empty { visibility: hidden; }   /* keeps the space so the bar never reflows */
   .viewnav button.active .nav-badge { background: rgba(255,255,255,.28); }
+
+  /* Corner warning */
+  .toast {
+    position: fixed; right: 20px; bottom: 20px; z-index: 60; width: 310px; max-width: calc(100vw - 40px);
+    background: var(--panel); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: 0 6px 24px rgba(16,24,40,.18);
+    opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .18s, transform .18s;
+  }
+  [data-theme="dark"] .toast { box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+  .toast.show { opacity: 1; transform: none; pointer-events: auto; }
+  .toast-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .toast-text { font-size: 13px; color: var(--muted); }
+  .toast-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+  .toast-acts button { font-size: 12px; padding: 6px 10px; }
 
   /* Journal */
   .hidden { display: none !important; }
@@ -545,6 +565,16 @@
   </div>
   <div id="sitesPanelList"></div>
 </aside>
+</div>
+
+<div class="toast" id="ticketAlert" role="status" aria-live="polite">
+  <div class="toast-title">⚠️ Visits still open</div>
+  <div class="toast-text" id="ticketAlertText"></div>
+  <div class="toast-acts">
+    <button class="primary" onclick="reviewTicketAlert()">Review log</button>
+    <button onclick="snoozeTicketAlert(30)">In 30 min</button>
+    <button class="muted-btn" onclick="snoozeTicketAlertToday()">Not today</button>
+  </div>
 </div>
 
 <footer>
@@ -1098,6 +1128,7 @@ function markChecked(id, silent) {
 function render() {
   renderSitesPanel();
   renderTicketBadge();
+  renderTicketAlert();
   if (mode === "tickets") return renderTickets();
   if (mode === "journal") return renderJournal();
   renderCategories();
@@ -1863,17 +1894,92 @@ function ticketRowHtml(t) {
     <input type="checkbox" ${t.done ? "checked" : ""} title="Mark complete" onchange="toggleTicket('${t.id}')">
     <div class="tk-main">
       <div class="tk-top">
-        <span class="tk-eid">${highlight(t.eid, query)}</span>
-        ${name ? `<span class="tk-name">${highlight(name, query)}</span>` : ""}
+        <span class="tk-eid">${highlight(t.eid, query)}</span>${copyBtn(t.eid, "eID")}
+        ${name ? `<span class="tk-name">${highlight(name, query)}</span>${copyBtn(name, "name")}` : ""}
         <span class="tk-time">${escapeHtml(timeOf(t))}${t.done ? " · done" : ""}</span>
       </div>
-      <div class="tk-reason${t.reason ? "" : " none"}">${t.reason ? highlight(t.reason, query) : "No reason noted"}</div>
+      <div class="tk-reason${t.reason ? "" : " none"}">${t.reason ? highlight(t.reason, query) : "No reason noted"}${copyBtn(t.reason, "reason")}</div>
     </div>
     <div class="tk-acts">
       <button title="Edit" onclick="editTicket('${t.id}')">✏️</button>
       <button class="del" title="Delete" onclick="deleteTicket('${t.id}')">🗑️</button>
     </div>
   </div>`;
+}
+/* ---------- Copy to clipboard ---------- */
+function copyBtn(text, label) {
+  if (!text) return "";
+  return `<button class="copy-btn" data-copy="${escapeHtml(text)}" title="Copy ${escapeHtml(label)}"
+    onclick="copyFrom(event, this)">⧉</button>`;
+}
+function copyFrom(ev, btn) {
+  if (ev) ev.stopPropagation();
+  const text = btn.getAttribute("data-copy") || "";
+  const done = () => {
+    btn.textContent = "✓";
+    btn.classList.add("copied");
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = "⧉"; btn.classList.remove("copied"); }, 1200);
+  };
+  // The Clipboard API needs a secure context, which a file:// page is not — hence the fallback
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => legacyCopy(text, done));
+  } else legacyCopy(text, done);
+}
+function legacyCopy(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+  document.body.appendChild(ta);
+  ta.select();
+  let okCopy = false;
+  try { okCopy = document.execCommand("copy"); } catch (e) {}
+  document.body.removeChild(ta);
+  if (okCopy) done();
+  else alert("Could not copy automatically. The text is:\n\n" + text);
+}
+
+/* ---------- End-of-day reminder ---------- */
+const CLEAR_BY_HOUR = 15;          // 3pm local time
+const ALERT_SNOOZE_KEY = "kb_ticket_alert_snooze";
+let alertSnoozeUntil = 0;
+(function initAlertSnooze() {
+  try { alertSnoozeUntil = parseInt(localStorage.getItem(ALERT_SNOOZE_KEY) || "0", 10) || 0; } catch (e) {}
+})();
+/* How many of today's visits are still open, once it is past the cut-off. 0 = nothing to warn about. */
+function ticketAlertDue(now) {
+  now = now || new Date();
+  if (now.getTime() < alertSnoozeUntil) return 0;
+  if (now.getHours() < CLEAR_BY_HOUR) return 0;
+  return openTickets(todayISO());
+}
+function renderTicketAlert(now) {
+  const el = document.getElementById("ticketAlert");
+  if (!el) return;
+  const open = ticketAlertDue(now);
+  if (!open) { el.classList.remove("show"); return; }
+  const at = String(CLEAR_BY_HOUR % 12 || 12) + (CLEAR_BY_HOUR < 12 ? "am" : "pm");
+  document.getElementById("ticketAlertText").textContent =
+    `It's past ${at} and ${plural(open, "visit")} from today ${open === 1 ? "is" : "are"} not marked complete yet.`;
+  el.classList.add("show");
+}
+function hideTicketAlert() { document.getElementById("ticketAlert").classList.remove("show"); }
+function setAlertSnooze(untilMs) {
+  alertSnoozeUntil = untilMs;
+  try { localStorage.setItem(ALERT_SNOOZE_KEY, String(untilMs)); } catch (e) {}
+  hideTicketAlert();
+}
+function snoozeTicketAlert(mins) { setAlertSnooze(Date.now() + mins * 60000); }
+function snoozeTicketAlertToday() {
+  const t = new Date(); t.setHours(24, 0, 0, 0);   // start of tomorrow
+  setAlertSnooze(t.getTime());
+}
+function reviewTicketAlert() {
+  hideTicketAlert();
+  snoozeTicketAlert(30);
+  if (mode !== "tickets") setMode("tickets");
+  else { activeTicketDay = todayISO(); render(); }
 }
 function renderTicketBadge() {
   const el = document.getElementById("navTicketBadge");
@@ -2100,6 +2206,11 @@ document.getElementById("search").addEventListener("input", e => { query = e.tar
 document.getElementById("journalBody").addEventListener("input", scheduleJournalSave);
 document.getElementById("journalBody").addEventListener("blur", flushJournalSave);
 window.addEventListener("beforeunload", () => { if (mode === "journal") flushJournalSave(); });
+// Watch the clock so the reminder appears as soon as the cut-off passes
+setInterval(renderTicketAlert, 30000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") renderTicketAlert();
+});
 // If the tab is left open overnight, come back to a fresh page for the new day
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || mode !== "journal") return;
