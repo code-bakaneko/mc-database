@@ -74,8 +74,13 @@
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
   button.primary:hover { filter: brightness(1.08); }
   .icon-btn { padding: 9px 11px; }
-  main { max-width: 1100px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 210px 1fr; gap: 20px; }
-  @media (max-width: 720px) { main { grid-template-columns: 1fr; } aside { order: -1; } }
+  .page {
+    max-width: 1360px; margin: 0 auto; padding: 20px; gap: 20px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 250px; align-items: start;
+  }
+  main { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 1040px) { .page { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 720px) { main { grid-template-columns: 1fr; } main > aside { order: -1; } }
   aside {
     align-self: start; position: sticky; top: 74px;
     background: var(--panel); border: 1px solid var(--border);
@@ -89,6 +94,25 @@
   .cat.active { background: var(--accent); color: #fff; }
   .cat .count { font-size: 12px; opacity: .7; }
   .cat.active .count { opacity: .9; }
+  /* Right-hand sites rail */
+  .sp-head {
+    display: flex; align-items: center; gap: 8px; padding: 2px 4px 8px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    border-bottom: 1px solid var(--border); margin-bottom: 6px;
+  }
+  .sp-head button { margin-left: auto; padding: 4px 8px; font-size: 12px; }
+  .sp-site {
+    display: block; text-decoration: none; color: var(--text);
+    padding: 7px 9px; margin-bottom: 4px; border-radius: 4px;
+    border: 1px solid var(--border); border-left: 3px solid var(--border); background: var(--panel-2);
+  }
+  .sp-site:hover { background: var(--panel); border-color: var(--link); border-left-color: inherit; }
+  .sp-name { display: block; font-size: 14px; font-weight: 600; }
+  .sp-note {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+  }
+  .sp-empty { font-size: 13px; color: var(--muted); padding: 8px 4px; }
   .cards { display: flex; flex-direction: column; gap: 14px; }
   .card {
     background: var(--panel); border: 1px solid var(--border);
@@ -356,7 +380,6 @@
       <input id="search" type="text" placeholder="Search guides, steps, links…" autocomplete="off">
     </div>
     <button class="primary" id="newEntryBtn" onclick="openEditor()">+ New Entry</button>
-    <button id="sitesBtn" onclick="openSites()" title="Manage your saved portals">🌐 Sites</button>
     <button class="icon-btn" title="Export backup" onclick="exportData()">💾</button>
     <button class="icon-btn" title="Import backup" onclick="document.getElementById('importFile').click()">📂</button>
     <button class="icon-btn" id="compactBtn" title="Compact view (collapse guides)" onclick="toggleCompact()">▤</button>
@@ -365,6 +388,7 @@
   </div>
 </header>
 
+<div class="page">
 <main id="kbView">
   <aside id="categories"></aside>
   <div>
@@ -410,6 +434,14 @@
     </div>
   </div>
 </main>
+
+<aside class="sites-panel">
+  <div class="sp-head">🌐 My Sites
+    <button onclick="openSites()" title="Add, edit and group your sites">⚙️ Manage</button>
+  </div>
+  <div id="sitesPanelList"></div>
+</aside>
+</div>
 
 <footer>
   Everything is saved in this browser. Use 💾 to back up your data and 📂 to restore it on another computer.
@@ -942,6 +974,7 @@ function markChecked(id, silent) {
 }
 
 function render() {
+  renderSitesPanel();
   if (mode === "journal") return renderJournal();
   renderCategories();
   let list = entries.filter(matches);
@@ -1411,6 +1444,33 @@ function refreshSitesUI() {
   if (document.getElementById("overlay").classList.contains("show")) refreshSiteChecksKeepSelection();
   render();
 }
+function renderSitesPanel() {
+  const box = document.getElementById("sitesPanelList");
+  if (!box) return;
+  if (!sites.length) {
+    box.innerHTML = `<div class="sp-empty">No sites saved yet. Use ⚙️ Manage to add the portals you use every day.</div>`;
+    return;
+  }
+  const link = s => {
+    const note = (s.note || "").trim();
+    return `<a class="sp-site" href="${escapeHtml(s.url)}" target="_blank" rel="noopener"
+       style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml(note || s.url)}">
+       <span class="sp-name">${escapeHtml(s.name)}</span>
+       ${note ? `<span class="sp-note">${escapeHtml(note)}</span>` : ""}
+     </a>`;
+  };
+  let html = "";
+  siteGroups.forEach(g => {
+    const mine = sites.filter(s => s.groupId === g.id);
+    if (mine.length) html += groupHeadHtml(g) + mine.map(link).join("");
+  });
+  const loose = sites.filter(s => !groupOf(s));
+  if (loose.length) {
+    html += (siteGroups.length ? `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Other</div>` : "") +
+      loose.map(link).join("");
+  }
+  box.innerHTML = html;
+}
 function renderSitesList() {
   const box = document.getElementById("sitesList");
   if (!sites.length) { box.innerHTML = `<div class="site-check-empty">No sites yet. Add your first one below.</div>`; return; }
@@ -1625,7 +1685,7 @@ function setMode(m) {
   document.getElementById("journalView").classList.toggle("hidden", !journalOn);
   document.getElementById("navKb").classList.toggle("active", !journalOn);
   document.getElementById("navJournal").classList.toggle("active", journalOn);
-  ["newEntryBtn", "sitesBtn", "compactBtn"].forEach(id =>
+  ["newEntryBtn", "compactBtn"].forEach(id =>
     document.getElementById(id).classList.toggle("hidden", journalOn));
   document.getElementById("search").placeholder =
     journalOn ? "Search your journal…" : "Search guides, steps, links…";
