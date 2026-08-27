@@ -574,7 +574,7 @@
     <div class="hint" style="margin-bottom:12px;">Save the portals you log into often — assigning, tracking, shipping, etc. Then tick them on any entry from the New Entry form.</div>
     <label class="reuse-opt" style="margin-top:0;">
       <input type="checkbox" id="siteReuseChk" onchange="toggleSiteReuse(this.checked)">
-      <span>Reuse one tab per site<span class="hint" style="margin-top:2px;">Clicking a site returns to the tab it is already open in, instead of opening another one. Ctrl/⌘-click still opens a fresh tab.</span></span>
+      <span>Open sites in one portal window<span class="hint" style="margin-top:2px;">Every site opens in a single separate window beside this one, instead of piling up tabs. Ctrl/⌘-click still opens a normal new tab.</span></span>
     </label>
     <label style="margin-top:0;">Groups <span style="font-weight:400;">(sort your sites by the kind of task they're for)</span></label>
     <div class="grp-box" id="groupsBox"></div>
@@ -1390,8 +1390,9 @@ function openSites() {
 }
 function closeSites() { document.getElementById("sitesOverlay").classList.remove("show"); }
 let editingSiteId = null;
-let siteReuse = true;          // reuse one tab per site instead of piling up new ones
-const siteWindows = {};        // site id -> the tab we opened for it
+let siteReuse = true;          // open sites in one dedicated portal window
+const PORTAL_NAME = "kbportals";
+let portalWin = null;          // the portal window, while we still hold a handle on it
 (function initSiteReuse() {
   try { siteReuse = localStorage.getItem("kb_site_reuse") !== "0"; } catch (e) {}
 })();
@@ -1400,8 +1401,18 @@ function toggleSiteReuse(on) {
   try { localStorage.setItem("kb_site_reuse", siteReuse ? "1" : "0"); } catch (e) {}
   refreshSitesUI();
 }
-function siteTarget(s) { return siteReuse ? "kbsite_" + s.id : "_blank"; }
-/* Click a site: bring its existing tab forward instead of opening another one.
+function siteTarget(s) { return siteReuse ? PORTAL_NAME : "_blank"; }
+function portalFeatures() {
+  // Size features are what make the browser open a real window instead of a tab.
+  // Parked against the right edge so it sits beside the knowledge base.
+  const sw = screen.availWidth || 1440, sh = screen.availHeight || 900;
+  const w = Math.max(900, Math.min(1400, Math.round(sw * 0.62)));
+  const h = Math.round(sh * 0.92);
+  const left = Math.max(0, (screen.availLeft || 0) + sw - w);
+  const top = screen.availTop || 0;
+  return `popup=yes,width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`;
+}
+/* Click a site: send it to the one portal window, opening that window if needed.
    Ctrl/Cmd/Shift/middle click still get the browser's normal new-tab behaviour. */
 function openSite(ev, id) {
   if (!siteReuse) return true;
@@ -1409,14 +1420,13 @@ function openSite(ev, id) {
   const s = sites.find(x => x.id === id);
   if (!s) return true;
   if (ev) ev.preventDefault();
-  const name = "kbsite_" + s.id;
-  const held = siteWindows[id];
   try {
-    if (held && !held.closed) { held.location.href = s.url; held.focus(); return false; }
-  } catch (e) { /* the tab went cross-origin on us; fall through and re-open by name */ }
-  // Opening by name finds the tab again even after this page has been reloaded
-  const win = window.open(s.url, name);
-  if (win) { siteWindows[id] = win; try { win.focus(); } catch (e) {} }
+    if (portalWin && !portalWin.closed) { portalWin.location.href = s.url; portalWin.focus(); return false; }
+  } catch (e) { /* handle went stale; fall through and find the window by name */ }
+  // Opening by name reaches the portal window again even after this page has been reloaded
+  const win = window.open(s.url, PORTAL_NAME, portalFeatures());
+  if (win) { portalWin = win; try { win.focus(); } catch (e) {} }
+  else alert("Your browser blocked the portal window. Allow pop-ups for this page, or untick “Open sites in one portal window” in ⚙️ Manage.");
   return false;
 }
 function renderGroups() {
