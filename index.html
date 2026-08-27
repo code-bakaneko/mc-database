@@ -335,6 +335,10 @@
   .grp-row input[type=text] { flex: 1; padding: 6px 9px; font-size: 14px; background: var(--panel); }
   .grp-row .grp-count { font-size: 12px; color: var(--muted); flex: none; }
   .grp-row button { padding: 4px 8px; flex: none; }
+  .grp-move { display: flex; flex-direction: column; gap: 1px; flex: none; }
+  .grp-move button { padding: 0 5px; font-size: 9px; line-height: 12px; }
+  .grp-move button:disabled { opacity: .3; cursor: default; }
+  .grp-move button:disabled:hover { border-color: var(--border); }
   .grp-add { border-top: 1px dashed var(--border); margin-top: 6px; padding-top: 8px; }
   .grp-head {
     display: flex; align-items: center; gap: 8px; margin: 10px 0 4px;
@@ -1574,9 +1578,13 @@ function openSite(ev, id) {
 function renderGroups() {
   const box = document.getElementById("groupsBox");
   if (!box) return;
-  const rows = siteGroups.map(g => {
+  const rows = siteGroups.map((g, i) => {
     const n = sites.filter(s => s.groupId === g.id).length;
     return `<div class="grp-row">
+      <span class="grp-move">
+        <button title="Move up" ${i === 0 ? "disabled" : ""} onclick="moveGroup('${g.id}', -1)">▲</button>
+        <button title="Move down" ${i === siteGroups.length - 1 ? "disabled" : ""} onclick="moveGroup('${g.id}', 1)">▼</button>
+      </span>
       <input type="color" value="${escapeHtml(g.color)}" title="Group colour" onchange="setGroupColor('${g.id}', this.value)">
       <input type="text" value="${escapeHtml(g.name)}" placeholder="Group name" onchange="renameGroup('${g.id}', this.value)">
       <span class="grp-count">${n ? plural(n, "site") : "empty"}</span>
@@ -1606,6 +1614,14 @@ function renameGroup(id, name) {
   if (!g) return;
   if (!name.trim()) { refreshSitesUI(); return; }
   g.name = name.trim();
+  saveGroups(); refreshSitesUI();
+}
+function moveGroup(id, dir) {
+  // Groups render in array order everywhere: the rail, the manager and the attach list
+  const i = siteGroups.findIndex(g => g.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= siteGroups.length) return;
+  siteGroups.splice(j, 0, siteGroups.splice(i, 1)[0]);
   saveGroups(); refreshSitesUI();
 }
 function setGroupColor(id, color) {
