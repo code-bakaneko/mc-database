@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knowledge Base</title>
+<style>
+  :root {
+    --bg: #eceef2;          /* soft off-white, easier on the eyes */
+    --panel: #ffffff;
+    --panel-2: #f1f3f6;
+    --text: #23272e;
+    --muted: #697586;
+    --border: #dde1e7;
+    --accent: #cc0000;      /* Mastercard-ish red */
+    --accent-2: #f79e1b;    /* Mastercard orange/yellow */
+    --link: #1565c0;
+    --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+    --radius: 4px;
+  }
+  [data-theme="dark"] {
+    --bg: #0f141b;
+    --panel: #171e28;
+    --panel-2: #1e2734;
+    --text: #e6edf5;
+    --muted: #93a1b3;
+    --border: #2a3644;
+    --accent: #ff4d4d;
+    --accent-2: #ffb74d;
+    --link: #64b5f6;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .bar {
+    max-width: 1100px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .dot { width: 26px; height: 18px; position: relative; }
+  .dot::before, .dot::after {
+    content: ""; position: absolute; top: 0; width: 18px; height: 18px; border-radius: 50%;
+  }
+  .dot::before { left: 0; background: var(--accent); }
+  .dot::after { right: 0; background: var(--accent-2); mix-blend-mode: multiply; opacity: .9; }
+  .search {
+    flex: 1; min-width: 200px; position: relative;
+  }
+  .search input {
+    width: 100%; padding: 11px 14px 11px 40px; font-size: 15px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel-2); color: var(--text); outline: none;
+  }
+  .search input:focus { border-color: var(--accent); }
+  .search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); opacity: .5; }
+  button {
+    font: inherit; cursor: pointer; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text);
+    padding: 9px 14px; border-radius: 4px; transition: .15s;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { filter: brightness(1.08); }
+  .icon-btn { padding: 9px 11px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 210px 1fr; gap: 20px; }
+  @media (max-width: 720px) { main { grid-template-columns: 1fr; } aside { order: -1; } }
+  aside {
+    align-self: start; position: sticky; top: 74px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
+  }
+  .cat {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 11px; border-radius: 4px; cursor: pointer; font-size: 14px;
+  }
+  .cat:hover { background: var(--panel-2); }
+  .cat.active { background: var(--accent); color: #fff; }
+  .cat .count { font-size: 12px; opacity: .7; }
+  .cat.active .count { opacity: .9; }
+  .cards { display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 6px; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .card-head { display: flex; align-items: center; gap: 9px; }
+  .card-head h3 { margin: 0; }
+  .card.compact { padding: 12px 18px; }
+  .card.compact .card-head { cursor: pointer; }
+  .card.compact .card-head h3 { font-size: 16px; }
+  .card.compact .meta { margin-top: 6px; }
+  .chevron { font-size: 10px; color: var(--muted); transition: transform .15s; flex: none; }
+  .chevron.open { transform: rotate(90deg); }
+  button.icon-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .04em; padding: 3px 9px; border-radius: 3px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .type-badge {
+    display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; padding: 3px 9px; border-radius: 3px; color: #fff; margin-right: 6px;
+  }
+  .t-KBA { background: #1565c0; }
+  .t-BBP { background: #2e7d32; }
+  .t-SharePoint { background: #6a1b9a; }
+  .t-Custom { background: var(--accent); }
+  .ref-num {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 12px; color: var(--muted); margin-left: 2px;
+  }
+  .aside-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); padding: 10px 11px 4px; margin-top: 6px;
+  }
+  .aside-label:first-child { margin-top: 0; }
+  .aside-divider { height: 1px; background: var(--border); margin: 8px 4px; }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 7px; vertical-align: middle; }
+  .steps { margin: 10px 0 0; padding-left: 22px; }
+  .steps li { margin: 4px 0; }
+  .body-text { white-space: pre-wrap; margin: 8px 0 0; }
+  .links { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .links a {
+    font-size: 13px; text-decoration: none; color: var(--link);
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 6px 11px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .links a:hover { border-color: var(--link); }
+  .card-actions { margin-top: 14px; display: flex; gap: 8px; opacity: 0; transition: .15s; }
+  .card:hover .card-actions { opacity: 1; }
+  .card-actions button { font-size: 13px; padding: 6px 11px; }
+  .del:hover { border-color: var(--accent); color: var(--accent); }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty svg { opacity: .4; margin-bottom: 12px; }
+  mark { background: var(--accent-2); color: #1c2431; border-radius: 3px; padding: 0 2px; }
+  .ver-badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 3px;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); margin-left: 6px;
+  }
+  .view-toggle { display: inline-flex; gap: 0; margin: 12px 0 2px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .view-toggle button { border: none; border-radius: 0; padding: 5px 12px; font-size: 12px; font-weight: 600; background: var(--panel-2); }
+  .view-toggle button.active { background: var(--accent); color: #fff; }
+  .view-toggle button:not(.active):hover { background: var(--border); }
+  .orig-note { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 6px; }
+
+  /* Diff view */
+  .diff { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin-top: 14px; max-height: 340px; overflow-y: auto; }
+  .diff .row { display: flex; padding: 2px 10px; white-space: pre-wrap; word-break: break-word; }
+  .diff .sign { width: 16px; flex: none; opacity: .6; user-select: none; }
+  .d-same { color: var(--text); }
+  .d-add { background: rgba(46,125,50,.18); color: var(--text); }
+  .d-add .sign { color: #2e7d32; opacity: 1; }
+  .d-del { background: rgba(204,0,0,.15); color: var(--text); }
+  .d-del .sign { color: var(--accent); opacity: 1; }
+  .diff-summary { margin-top: 12px; font-size: 14px; font-weight: 600; }
+  .diff-summary .add-c { color: #2e7d32; }
+  .diff-summary .del-c { color: var(--accent); }
+
+  /* Rich guide content (rendered on cards) */
+  .guide-content { margin-top: 12px; }
+  .guide-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; display: block; border: 1px solid var(--border); }
+  .guide-content h2 { font-size: 18px; margin: 16px 0 6px; }
+  .guide-content h3 { font-size: 15px; margin: 14px 0 4px; }
+  .guide-content p { margin: 6px 0; }
+  .guide-content ul, .guide-content ol { margin: 6px 0; padding-left: 22px; }
+  .guide-content a { color: var(--link); }
+
+  /* Rich text editor */
+  .rte-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); border-bottom: none; border-radius: 4px 4px 0 0; }
+  .rte-toolbar button { padding: 6px 10px; font-size: 13px; min-width: 34px; }
+  .rte-toolbar .sep { width: 1px; background: var(--border); margin: 2px 4px; }
+  .rte {
+    min-height: 240px; max-height: 460px; overflow-y: auto; padding: 14px;
+    border: 1px solid var(--border); border-radius: 0 0 4px 4px;
+    background: var(--panel); color: var(--text); outline: none; line-height: 1.6;
+  }
+  .rte:focus { border-color: var(--accent); }
+  .rte img { max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; display: block; }
+  .rte h2 { font-size: 18px; margin: 14px 0 6px; }
+  .rte h3 { font-size: 15px; margin: 12px 0 4px; }
+  .rte:empty:before { content: attr(data-placeholder); color: var(--muted); }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50;
+    display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    width: 100%; max-width: 560px; box-shadow: var(--shadow); padding: 22px;
+  }
+  .modal h2 { margin: 0 0 16px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 12px 0 5px; }
+  input[type=text], textarea, select {
+    width: 100%; padding: 10px 12px; font: inherit; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; outline: none;
+  }
+  input[type=text]:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 90px; }
+  .hint { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
+  .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+  .muted-btn { color: var(--muted); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px; }
+  .count-badge { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><span class="dot"></span> Knowledge Base</div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="text" placeholder="Search guides, steps, links…" autocomplete="off">
+    </div>
+    <button class="primary" onclick="openEditor()">+ New Entry</button>
+    <button class="icon-btn" title="Export backup" onclick="exportData()">💾</button>
+    <button class="icon-btn" title="Import backup" onclick="document.getElementById('importFile').click()">📂</button>
+    <button class="icon-btn" id="compactBtn" title="Compact view (collapse guides)" onclick="toggleCompact()">▤</button>
+    <button class="icon-btn" title="Toggle theme" onclick="toggleTheme()">🌓</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</header>
+
+<main>
+  <aside id="categories"></aside>
+  <div>
+    <div class="count-badge" id="countBadge" style="margin-bottom:12px;"></div>
+    <div class="cards" id="cards"></div>
+  </div>
+</main>
+
+<footer>
+  Everything is saved in this browser. Use 💾 to back up your data and 📂 to restore it on another computer.
+</footer>
+
+<!-- Editor Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">New Entry</h2>
+    <input type="hidden" id="editId">
+    <label>Title</label>
+    <input type="text" id="fTitle" placeholder="e.g. How to reset a user's AD password">
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:140px;">
+        <label>Source Type</label>
+        <select id="fType">
+          <option value="KBA">KBA</option>
+          <option value="BBP">BBP</option>
+          <option value="SharePoint">SharePoint</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+      <div style="flex:1; min-width:140px;" id="refWrap">
+        <label id="lblRef">Reference #</label>
+        <input type="text" id="fRef" placeholder="e.g. KBA0012345">
+      </div>
+    </div>
+
+    <div id="versionWrap">
+      <label>Version <span style="font-weight:400;">(optional)</span></label>
+      <input type="text" id="fVersion" placeholder="e.g. v3  or  2026-08-01">
+    </div>
+
+    <label>Topic / Category</label>
+    <input type="text" id="fCategory" list="catList" placeholder="e.g. Passwords">
+    <datalist id="catList"></datalist>
+
+    <label id="lblOriginal">Original text (paste the official guide here)</label>
+    <textarea id="fOriginal" placeholder="Paste the official KBA / BBP / SharePoint text here, exactly as-is."></textarea>
+    <div class="hint" id="hintOriginal">Kept untouched as your source of truth. After saving, use 🎨 Customize to build it into a styled guide with images.</div>
+
+    <label>Links (one per line)</label>
+    <textarea id="fLinks" placeholder="Label | https://example.com&#10;Password Portal | https://portal.example.com"></textarea>
+    <div class="hint">Format: <b>Label | URL</b> — or just paste a URL on its own line.</div>
+
+    <div class="modal-actions">
+      <button class="muted-btn" onclick="closeEditor()">Cancel</button>
+      <button class="primary" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diff / Update Modal -->
+<div class="overlay" id="diffOverlay">
+  <div class="modal" style="max-width:640px;">
+    <h2>🔄 Check for an update</h2>
+    <div class="hint" id="diffFor" style="margin-bottom:10px;"></div>
+    <label>Paste the newest official text</label>
+    <textarea id="fNewText" placeholder="Paste the current version of the guide here, then click Compare." style="min-height:120px;"></textarea>
+    <div id="diffResult"></div>
+    <div class="modal-actions">
+      <button class="muted-btn" onclick="closeDiff()">Close</button>
+      <button onclick="runDiff()">Compare</button>
+      <button class="primary" id="applyBtn" style="display:none;" onclick="applyUpdate()">Save as new Original</button>
+    </div>
+  </div>
+</div>
+
+<!-- Customize (rich guide) Modal -->
+<div class="overlay" id="customOverlay">
+  <div class="modal" style="max-width:720px;">
+    <h2 id="customTitle">🎨 Customize guide</h2>
+    <div class="hint" style="margin-bottom:10px;">Build the pasted text into a proper guide — format it, add headings and lists, and drop in screenshots. The Original stays saved separately.</div>
+    <div class="rte-toolbar">
+      <button type="button" title="Bold" onmousedown="event.preventDefault()" onclick="rte('bold')"><b>B</b></button>
+      <button type="button" title="Italic" onmousedown="event.preventDefault()" onclick="rte('italic')"><i>I</i></button>
+      <button type="button" title="Underline" onmousedown="event.preventDefault()" onclick="rte('underline')"><u>U</u></button>
+      <span class="sep"></span>
+      <button type="button" title="Heading" onmousedown="event.preventDefault()" onclick="rte('formatBlock','H2')">H1</button>
+      <button type="button" title="Sub-heading" onmousedown="event.preventDefault()" onclick="rte('formatBlock','H3')">H2</button>
+      <button type="button" title="Normal text" onmousedown="event.preventDefault()" onclick="rte('formatBlock','P')">¶</button>
+      <span class="sep"></span>
+      <button type="button" title="Bulleted list" onmousedown="event.preventDefault()" onclick="rte('insertUnorderedList')">• List</button>
+      <button type="button" title="Numbered list" onmousedown="event.preventDefault()" onclick="rte('insertOrderedList')">1. List</button>
+      <span class="sep"></span>
+      <button type="button" title="Add link" onmousedown="event.preventDefault()" onclick="addRteLink()">🔗</button>
+      <button type="button" title="Insert image" onmousedown="event.preventDefault()" onclick="document.getElementById('imgFile').click()">🖼️ Image</button>
+      <button type="button" title="Clear formatting" onmousedown="event.preventDefault()" onclick="rte('removeFormat')">✖ Format</button>
+      <input type="file" id="imgFile" accept="image/*" style="display:none" onchange="insertImage(event)">
+    </div>
+    <div class="rte" id="rteBody" contenteditable="true" data-placeholder="Start building your guide here…"></div>
+    <div class="hint" style="margin-top:6px;">Images are stored inside this file's data and are auto-shrunk to save space. Remember to 💾 back up after adding images.</div>
+    <div class="modal-actions">
+      <button class="muted-btn" onclick="closeCustom()">Cancel</button>
+      <button id="resetGuideBtn" onclick="resetGuideToOriginal()" style="margin-right:auto;">↺ Start from Original</button>
+      <button class="primary" onclick="saveCustom()">Save guide</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = "kb_entries_v1";
+let entries = [];
+let activeCat = "All";
+let activeType = "All";
+let query = "";
+let viewState = {};   // entry id -> "original" | "custom"
+let diffId = null;    // entry currently being update-checked
+let compact = false;  // compact view collapses card bodies
+let expandState = {}; // entry id -> true when expanded in compact mode
+
+/* ---------- Seed data (shown only the very first time) ---------- */
+const TYPES = ["KBA", "BBP", "SharePoint", "Custom"];
+const SEED = [
+  {
+    id: uid(), type: "Custom", ref: "", version: "", category: "Getting Started",
+    title: "How to use this Knowledge Base",
+    original: "Search at the top to find anything instantly.\nUse the left sidebar to filter by Source (KBA / BBP / SharePoint / Custom) or by Topic.\nAdd a company guide by pasting its official text into Original.\nThen click 🎨 Customize on the entry to build it into a styled guide with headings, lists and screenshots.\nUse 🔄 Check for update to paste new text later and see exactly what changed.\nUse the 💾 button often to back up your data to a file.",
+    guide: "",
+    links: []
+  },
+  {
+    id: uid(), type: "KBA", ref: "KBA0012345", version: "v2", category: "Passwords",
+    title: "Reset a user's password (example KBA)",
+    original: "1. Verify the caller's identity per policy.\n2. Open the Password Management console.\n3. Search for the user account by their network ID.\n4. Click Reset and generate a temporary password.\n5. Advise the user the password must be changed at next logon.",
+    guide: "",
+    links: [["Open KBA article", "https://example.com"]]
+  }
+];
+
+/* ---------- Utilities ---------- */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) { entries = JSON.parse(raw); migrate(); return; }
+  } catch (e) {}
+  entries = SEED.slice();
+  save();
+}
+function migrate() {
+  // Upgrade older entries that used a single `body` field
+  let changed = false;
+  entries.forEach(e => {
+    if (e.original === undefined) { e.original = e.body || ""; changed = true; }
+    if (e.guide === undefined) { e.guide = e.custom ? plainToHtml(e.custom) : ""; changed = true; }
+    if (e.version === undefined) { e.version = ""; changed = true; }
+    if (e.body !== undefined) { delete e.body; changed = true; }
+    if (e.custom !== undefined) { delete e.custom; changed = true; }
+  });
+  if (changed) save();
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }
+  catch (e) { alert("Could not save — browser storage may be full or blocked."); }
+}
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function plainToHtml(text) {
+  return (text || "").split("\n").map(l => l.trim())
+    .map(l => l ? `<p>${escapeHtml(l)}</p>` : "").join("");
+}
+function highlight(text, q) {
+  const safe = escapeHtml(text);
+  if (!q) return safe;
+  const terms = q.split(/\s+/).filter(Boolean).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!terms.length) return safe;
+  try {
+    const re = new RegExp("(" + terms.join("|") + ")", "ig");
+    return safe.replace(re, "<mark>$1</mark>");
+  } catch (e) { return safe; }
+}
+
+/* ---------- Rendering ---------- */
+function categoryCounts() {
+  const map = {};
+  entries.forEach(e => { const c = e.category || "Uncategorized"; map[c] = (map[c] || 0) + 1; });
+  return map;
+}
+function typeCounts() {
+  const map = {};
+  entries.forEach(e => { const t = e.type || "Custom"; map[t] = (map[t] || 0) + 1; });
+  return map;
+}
+function renderCategories() {
+  const counts = categoryCounts();
+  const cats = Object.keys(counts).sort();
+  const tc = typeCounts();
+  const aside = document.getElementById("categories");
+
+  let html = `<div class="aside-label">Source</div>`;
+  html += typeRow("All", entries.length, "");
+  TYPES.forEach(t => { if (tc[t]) html += typeRow(t, tc[t], t); });
+
+  html += `<div class="aside-divider"></div><div class="aside-label">Topic</div>`;
+  html += catRow("All", entries.length);
+  cats.forEach(c => html += catRow(c, counts[c]));
+  aside.innerHTML = html;
+
+  // datalist for editor
+  document.getElementById("catList").innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join("");
+}
+function typeRow(name, count, cls) {
+  const active = name === activeType ? " active" : "";
+  const sw = cls ? `<span class="swatch t-${cls}"></span>` : "";
+  return `<div class="cat${active}" onclick="setType('${name}')">
+    <span>${sw}${escapeHtml(name)}</span><span class="count">${count}</span></div>`;
+}
+function catRow(name, count) {
+  const active = name === activeCat ? " active" : "";
+  return `<div class="cat${active}" onclick="setCat('${escapeHtml(name).replace(/'/g,"\\'")}')">
+    <span>${escapeHtml(name)}</span><span class="count">${count}</span></div>`;
+}
+function setCat(c) { activeCat = c; render(); }
+function setType(t) { activeType = t; render(); }
+
+function entryHay(e) {
+  const guideText = (e.guide || "").replace(/<[^>]*>/g, " ");
+  return (e.title + " " + (e.original||"") + " " + guideText + " " + (e.category||"") + " " +
+    (e.type||"") + " " + (e.ref||"") + " " + (e.version||"") + " " +
+    (e.links||[]).map(l => l.join(" ")).join(" ")).toLowerCase();
+}
+function queryTerms() {
+  return query.toLowerCase().split(/\s+/).filter(Boolean);
+}
+function matchScore(e, terms) {
+  const hay = entryHay(e);
+  return terms.reduce((n, t) => n + (hay.includes(t) ? 1 : 0), 0);
+}
+function matches(e) {
+  if (activeType !== "All" && (e.type || "Custom") !== activeType) return false;
+  if (activeCat !== "All" && (e.category || "Uncategorized") !== activeCat) return false;
+  const terms = queryTerms();
+  if (!terms.length) return true;
+  // Match if the document contains ANY of the typed words (some, not all)
+  return matchScore(e, terms) > 0;
+}
+function bodyToHtml(body, q) {
+  const lines = (body || "").split("\n").map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return "";
+  // If it looks like a list (2+ lines), render as ordered steps
+  if (lines.length >= 2) {
+    return `<ol class="steps">${lines.map(l =>
+      `<li>${highlight(l.replace(/^[-\d.)\s]+/, ""), q)}</li>`).join("")}</ol>`;
+  }
+  return `<p class="body-text">${highlight(lines[0], q)}</p>`;
+}
+function entryContentHtml(e) {
+  const hasGuide = e.guide && e.guide.trim();
+  if (!hasGuide) {
+    return bodyToHtml(e.original, query);
+  }
+  const showOriginal = viewState[e.id] === "original";
+  const toggle = `<div class="view-toggle">
+    <button class="${!showOriginal ? "active" : ""}" onclick="setView('${e.id}','guide')">📘 Guide</button>
+    <button class="${showOriginal ? "active" : ""}" onclick="setView('${e.id}','original')">Original</button>
+  </div>`;
+  const content = showOriginal
+    ? bodyToHtml(e.original, query)
+    : `<div class="guide-content">${e.guide}</div>`;
+  return toggle + content;
+}
+function setView(id, mode) { viewState[id] = mode; render(); }
+
+function render() {
+  renderCategories();
+  let list = entries.filter(matches);
+  const terms = queryTerms();
+  if (terms.length) {
+    // Best matches first: most words found, then title matches
+    list = list
+      .map(e => ({ e, score: matchScore(e, terms), inTitle: terms.some(t => e.title.toLowerCase().includes(t)) }))
+      .sort((a, b) => (b.score - a.score) || (b.inTitle - a.inTitle))
+      .map(x => x.e);
+  }
+  const cards = document.getElementById("cards");
+  document.getElementById("countBadge").textContent =
+    `${list.length} ${list.length === 1 ? "entry" : "entries"}${activeCat !== "All" ? " in " + activeCat : ""}${query ? ` matching “${query}”` : ""}`;
+
+  if (list.length === 0) {
+    cards.innerHTML = `<div class="empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <p>No entries found.<br>Try a different search, or click <b>+ New Entry</b> to add one.</p></div>`;
+    return;
+  }
+  cards.innerHTML = list.map(e => {
+    const links = (e.links || []).filter(l => l[1] && l[1] !== "#").map(l =>
+      `<a href="${escapeHtml(l[1])}" target="_blank" rel="noopener">🔗 ${escapeHtml(l[0] || l[1])}</a>`).join("");
+    const type = e.type || "Custom";
+    const refHtml = e.ref ? `<span class="ref-num">${highlight(e.ref, query)}</span>` : "";
+    const verHtml = e.version ? `<span class="ver-badge">${escapeHtml(e.version)}</span>` : "";
+    const expanded = !compact || expandState[e.id];
+    const head = `<div class="card-head" ${compact ? `onclick="toggleExpand('${e.id}')"` : ""}>
+        ${compact ? `<span class="chevron ${expanded ? "open" : ""}">▶</span>` : ""}
+        <h3>${highlight(e.title, query)}</h3>
+      </div>
+      <div class="meta"><span class="type-badge t-${type}">${escapeHtml(type)}</span>${refHtml}${verHtml}
+      <span class="tag">${escapeHtml(e.category || "Uncategorized")}</span></div>`;
+    const bodyHtml = expanded ? `
+      ${entryContentHtml(e)}
+      ${links ? `<div class="links">${links}</div>` : ""}
+      <div class="card-actions">
+        <button onclick="openEditor('${e.id}')">✏️ Edit</button>
+        <button onclick="openCustom('${e.id}')">🎨 ${e.guide && e.guide.trim() ? "Edit guide" : "Customize"}</button>
+        ${type !== "Custom" ? `<button onclick="openDiff('${e.id}')">🔄 Check for update</button>` : ""}
+        <button class="del" onclick="deleteEntry('${e.id}')">🗑️ Delete</button>
+      </div>` : "";
+    return `<div class="card${compact ? " compact" : ""}">${head}${bodyHtml}</div>`;
+  }).join("");
+}
+
+/* ---------- Editor ---------- */
+function openEditor(id) {
+  const overlay = document.getElementById("overlay");
+  if (id) {
+    const e = entries.find(x => x.id === id);
+    document.getElementById("modalTitle").textContent = "Edit Entry";
+    document.getElementById("editId").value = e.id;
+    document.getElementById("fTitle").value = e.title;
+    document.getElementById("fType").value = e.type || "Custom";
+    document.getElementById("fRef").value = e.ref || "";
+    document.getElementById("fVersion").value = e.version || "";
+    document.getElementById("fCategory").value = e.category || "";
+    document.getElementById("fOriginal").value = e.original || "";
+    document.getElementById("fLinks").value = (e.links || []).map(l => l[0] === l[1] ? l[1] : `${l[0]} | ${l[1]}`).join("\n");
+  } else {
+    document.getElementById("modalTitle").textContent = "New Entry";
+    document.getElementById("editId").value = "";
+    document.getElementById("fTitle").value = "";
+    document.getElementById("fType").value = activeType !== "All" ? activeType : "KBA";
+    document.getElementById("fRef").value = "";
+    document.getElementById("fVersion").value = "";
+    document.getElementById("fCategory").value = activeCat !== "All" ? activeCat : "";
+    document.getElementById("fOriginal").value = "";
+    document.getElementById("fLinks").value = "";
+  }
+  updateEditorMode();
+  overlay.classList.add("show");
+  document.getElementById("fTitle").focus();
+}
+function updateEditorMode() {
+  const type = document.getElementById("fType").value;
+  const isCustom = type === "Custom";
+  const hasNumber = type === "KBA" || type === "BBP";
+  document.getElementById("versionWrap").style.display = isCustom ? "none" : "";
+  document.getElementById("refWrap").style.display = hasNumber ? "" : "none";
+  if (hasNumber) {
+    document.getElementById("lblRef").textContent = type + " number";
+    document.getElementById("fRef").placeholder = type === "KBA" ? "e.g. KBA0012345" : "e.g. BBP0001234";
+  }
+  document.getElementById("lblOriginal").textContent =
+    isCustom ? "Details / Steps" : "Original text (paste the official guide here)";
+  document.getElementById("hintOriginal").textContent =
+    isCustom ? "Your own guide — one step per line shows as a numbered list. Use 🎨 Customize after saving to add formatting and images."
+             : "Kept untouched as your source of truth. After saving, use 🎨 Customize to build it into a styled guide with images.";
+}
+function closeEditor() { document.getElementById("overlay").classList.remove("show"); }
+function parseLinks(text) {
+  return text.split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    const parts = l.split("|").map(p => p.trim());
+    if (parts.length >= 2) return [parts[0], parts.slice(1).join("|")];
+    return [parts[0], parts[0]];
+  });
+}
+function saveEntry() {
+  const title = document.getElementById("fTitle").value.trim();
+  if (!title) { alert("Please enter a title."); return; }
+  const type = document.getElementById("fType").value || "Custom";
+  const hasNumber = type === "KBA" || type === "BBP";
+  const data = {
+    title,
+    type,
+    ref: hasNumber ? document.getElementById("fRef").value.trim() : "",
+    version: type === "Custom" ? "" : document.getElementById("fVersion").value.trim(),
+    category: document.getElementById("fCategory").value.trim() || "Uncategorized",
+    original: document.getElementById("fOriginal").value.trim(),
+    links: parseLinks(document.getElementById("fLinks").value)
+  };
+  const id = document.getElementById("editId").value;
+  if (id) {
+    const e = entries.find(x => x.id === id);
+    Object.assign(e, data);
+  } else {
+    entries.unshift(Object.assign({ id: uid() }, data));
+  }
+  save(); render(); closeEditor();
+}
+function deleteEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (confirm(`Delete “${e.title}”? This cannot be undone.`)) {
+    entries = entries.filter(x => x.id !== id);
+    save(); render();
+  }
+}
+
+/* ---------- Check for update (diff) ---------- */
+function openDiff(id) {
+  diffId = id;
+  const e = entries.find(x => x.id === id);
+  document.getElementById("diffFor").innerHTML =
+    `Comparing against the saved <b>Original</b> of “${escapeHtml(e.title)}”${e.version ? " (" + escapeHtml(e.version) + ")" : ""}.`;
+  document.getElementById("fNewText").value = "";
+  document.getElementById("diffResult").innerHTML = "";
+  document.getElementById("applyBtn").style.display = "none";
+  document.getElementById("diffOverlay").classList.add("show");
+  document.getElementById("fNewText").focus();
+}
+function closeDiff() { document.getElementById("diffOverlay").classList.remove("show"); diffId = null; }
+
+function diffLines(a, b) {
+  const A = a.split("\n"), B = b.split("\n");
+  const n = A.length, m = B.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { out.push({ t: "same", line: A[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ t: "del", line: A[i] }); i++; }
+    else { out.push({ t: "add", line: B[j] }); j++; }
+  }
+  while (i < n) { out.push({ t: "del", line: A[i++] }); }
+  while (j < m) { out.push({ t: "add", line: B[j++] }); }
+  return out;
+}
+function runDiff() {
+  const e = entries.find(x => x.id === diffId);
+  const newText = document.getElementById("fNewText").value;
+  if (!newText.trim()) { alert("Paste the new text first."); return; }
+  const rows = diffLines((e.original || "").trim(), newText.trim());
+  const adds = rows.filter(r => r.t === "add").length;
+  const dels = rows.filter(r => r.t === "del").length;
+  const result = document.getElementById("diffResult");
+
+  if (adds === 0 && dels === 0) {
+    result.innerHTML = `<div class="diff-summary" style="color:#2e7d32;">✅ No changes — this matches your saved Original exactly.</div>`;
+    document.getElementById("applyBtn").style.display = "none";
+    return;
+  }
+  const sign = { same: " ", add: "+", del: "−" };
+  const body = rows.map(r =>
+    `<div class="row d-${r.t}"><span class="sign">${sign[r.t]}</span><span>${escapeHtml(r.line) || "&nbsp;"}</span></div>`
+  ).join("");
+  result.innerHTML =
+    `<div class="diff-summary">Changes found: <span class="add-c">+${adds} added</span> · <span class="del-c">−${dels} removed</span></div>
+     <div class="diff">${body}</div>
+     <div class="orig-note">Green = in the new text · Red = only in your old Original. Save it as the new Original to keep it current.</div>`;
+  document.getElementById("applyBtn").style.display = "";
+}
+function applyUpdate() {
+  const e = entries.find(x => x.id === diffId);
+  const newText = document.getElementById("fNewText").value.trim();
+  const newVer = prompt("Optional: new version label for this update (leave blank to keep current)", e.version || "");
+  e.original = newText;
+  if (newVer !== null && newVer.trim() !== "") e.version = newVer.trim();
+  save();
+  const hadGuide = e.guide && e.guide.trim();
+  closeDiff();
+  render();
+  if (hadGuide) alert("Original updated.\n\nHeads up: you built a customized Guide for this entry — you may want to review it against the changes (🎨 Edit guide).");
+}
+
+/* ---------- Customize (rich guide builder) ---------- */
+let customId = null;
+function openCustom(id) {
+  customId = id;
+  const e = entries.find(x => x.id === id);
+  document.getElementById("customTitle").textContent = "🎨 " + (e.guide && e.guide.trim() ? "Edit guide: " : "Customize: ") + e.title;
+  const rte = document.getElementById("rteBody");
+  // Start from the existing guide, or seed from the Original text so there's something to shape.
+  rte.innerHTML = (e.guide && e.guide.trim()) ? e.guide : plainToHtml(e.original);
+  document.getElementById("customOverlay").classList.add("show");
+  rte.focus();
+}
+function closeCustom() { document.getElementById("customOverlay").classList.remove("show"); customId = null; }
+function rte(cmd, val) {
+  document.getElementById("rteBody").focus();
+  document.execCommand(cmd, false, val || null);
+}
+function addRteLink() {
+  const url = prompt("Link URL:", "https://");
+  if (url) rte("createLink", url);
+}
+function resetGuideToOriginal() {
+  const e = entries.find(x => x.id === customId);
+  if (confirm("Replace the editor content with a fresh copy of the Original text? Your current unsaved guide edits will be lost.")) {
+    document.getElementById("rteBody").innerHTML = plainToHtml(e.original);
+  }
+}
+function insertImage(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 1000;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      let dataUrl;
+      try { dataUrl = canvas.toDataURL("image/jpeg", 0.82); }
+      catch (e) { dataUrl = reader.result; }
+      document.getElementById("rteBody").focus();
+      document.execCommand("insertHTML", false, `<img src="${dataUrl}" alt="">`);
+    };
+    img.onerror = () => alert("That image could not be read.");
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  ev.target.value = "";
+}
+function saveCustom() {
+  const e = entries.find(x => x.id === customId);
+  const html = document.getElementById("rteBody").innerHTML.trim();
+  // Treat an empty editor (just an empty paragraph / break) as "no guide"
+  e.guide = /^(<br>|<p>(<br>)?<\/p>|\s)*$/i.test(html) ? "" : html;
+  save();
+  if (e.guide) viewState[e.id] = "guide";
+  closeCustom();
+  render();
+}
+
+/* ---------- Export / Import ---------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "knowledge-base-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error("bad format");
+      if (confirm("Import " + data.length + " entries?\n\nOK = replace everything\nCancel = merge with existing")) {
+        entries = data;
+      } else {
+        const ids = new Set(entries.map(e => e.id));
+        data.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
+      }
+      save(); render();
+    } catch (e) { alert("That file could not be read as a valid backup."); }
+  };
+  reader.readAsText(file);
+  ev.target.value = "";
+}
+
+/* ---------- Compact view ---------- */
+function toggleCompact() {
+  compact = !compact;
+  expandState = {};   // collapse everything fresh
+  try { localStorage.setItem("kb_compact", compact ? "1" : "0"); } catch (e) {}
+  document.getElementById("compactBtn").classList.toggle("active", compact);
+  render();
+}
+function toggleExpand(id) {
+  expandState[id] = !expandState[id];
+  render();
+}
+(function initCompact() {
+  try { compact = localStorage.getItem("kb_compact") === "1"; } catch (e) {}
+  const btn = document.getElementById("compactBtn");
+  if (btn) btn.classList.toggle("active", compact);
+})();
+
+/* ---------- Theme ---------- */
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("kb_theme", next); } catch (e) {}
+}
+(function initTheme() {
+  let t;
+  try { t = localStorage.getItem("kb_theme"); } catch (e) {}
+  if (!t) t = "light";   // default to the white theme
+  document.documentElement.setAttribute("data-theme", t);
+})();
+
+/* ---------- Wire up ---------- */
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; render(); });
+document.getElementById("fType").addEventListener("change", updateEditorMode);
+document.getElementById("overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeEditor(); });
+document.getElementById("diffOverlay").addEventListener("click", e => { if (e.target.id === "diffOverlay") closeDiff(); });
+document.getElementById("customOverlay").addEventListener("click", e => { if (e.target.id === "customOverlay") closeCustom(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { closeEditor(); closeDiff(); closeCustom(); }
+  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+    e.preventDefault(); document.getElementById("search").focus();
+  }
+});
+
+load();
+render();
+</script>
+</body>
+</html>
