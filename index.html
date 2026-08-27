@@ -128,8 +128,6 @@
   .aside-label:first-child { margin-top: 0; }
   .aside-divider { height: 1px; background: var(--border); margin: 8px 4px; }
   .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 7px; vertical-align: middle; }
-  .steps { margin: 10px 0 0; padding-left: 22px; }
-  .steps li { margin: 4px 0; }
   .body-text { white-space: pre-wrap; margin: 8px 0 0; }
   .links { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
   .links a {
@@ -149,6 +147,29 @@
     display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 3px;
     background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); margin-left: 6px;
   }
+  /* Update-check countdown */
+  .due {
+    flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 3px;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); cursor: pointer;
+  }
+  .due:hover { border-color: var(--accent); }
+  .due-soon { color: #a86400; border-color: #e2a83b; background: rgba(247,158,27,.16); }
+  [data-theme="dark"] .due-soon { color: #ffc266; }
+  .due-over { color: #fff; background: var(--accent); border-color: var(--accent); }
+  [data-theme="dark"] .due-over { color: #2b0f0f; }
+  .due-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel-2);
+  }
+  .due-row label { margin: 0; font-size: 12px; }
+  .due-row input[type=date] {
+    width: auto; padding: 6px 9px; font: inherit; color: var(--text);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .due-row button { font-size: 12px; padding: 6px 10px; background: var(--panel); }
+  .due-last { font-size: 12px; color: var(--muted); margin-left: auto; }
+
   .view-toggle { display: inline-flex; gap: 0; margin: 12px 0 2px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
   .view-toggle button { border: none; border-radius: 0; padding: 5px 12px; font-size: 12px; font-weight: 600; background: var(--panel-2); }
   .view-toggle button.active { background: var(--accent); color: #fff; }
@@ -178,6 +199,20 @@
   .guide-content ul, .guide-content ol { margin: 6px 0; padding-left: 22px; }
   .guide-content a { color: var(--link); }
 
+  /* Pasted original, shown with its own formatting intact */
+  .orig-html {
+    margin-top: 12px; padding: 14px 16px; overflow-x: auto;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: #ffffff; color: #1c2431;
+  }
+  [data-theme="dark"] .orig-html { background: #eef0f3; border-color: #3a4756; }
+  .orig-html img { max-width: 100%; height: auto; }
+  .orig-html table { border-collapse: collapse; max-width: 100%; }
+  .orig-html td, .orig-html th { border: 1px solid #c9ced6; padding: 4px 8px; }
+  .orig-html a { color: #1565c0; }
+  .orig-html > *:first-child { margin-top: 0; }
+  .orig-html > *:last-child { margin-bottom: 0; }
+
   /* Rich text editor */
   .rte-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: var(--panel-2);
     border: 1px solid var(--border); border-bottom: none; border-radius: 4px 4px 0 0; }
@@ -193,6 +228,9 @@
   .rte h2 { font-size: 18px; margin: 14px 0 6px; }
   .rte h3 { font-size: 15px; margin: 12px 0 4px; }
   .rte:empty:before { content: attr(data-placeholder); color: var(--muted); }
+  .paste-box { min-height: 150px; max-height: 320px; }
+  .paste-tools { align-items: center; }
+  .paste-note { font-size: 12px; color: var(--muted); padding-left: 4px; }
 
   /* Modal */
   .overlay {
@@ -315,7 +353,11 @@
     </div>
 
     <label id="lblOriginal">Original text (paste the official guide here)</label>
-    <textarea id="fOriginal" placeholder="Paste the official KBA / BBP / SharePoint text here, exactly as-is."></textarea>
+    <div class="rte-toolbar paste-tools">
+      <button type="button" onmousedown="event.preventDefault()" onclick="stripFormatting('fOriginal')">✖ Remove formatting</button>
+      <span class="paste-note">Fonts, spacing, colours, tables and images from your paste are kept exactly as they were.</span>
+    </div>
+    <div class="rte paste-box" id="fOriginal" contenteditable="true" data-placeholder="Paste the official KBA / BBP / SharePoint text here, exactly as-is."></div>
     <div class="hint" id="hintOriginal">Kept untouched as your source of truth. After saving, use 🎨 Customize to build it into a styled guide with images.</div>
 
     <label>Attach saved sites <span style="font-weight:400;">(portals you log into)</span></label>
@@ -339,7 +381,11 @@
     <h2>🔄 Check for an update</h2>
     <div class="hint" id="diffFor" style="margin-bottom:10px;"></div>
     <label>Paste the newest official text</label>
-    <textarea id="fNewText" placeholder="Paste the current version of the guide here, then click Compare." style="min-height:120px;"></textarea>
+    <div class="rte-toolbar paste-tools">
+      <button type="button" onmousedown="event.preventDefault()" onclick="stripFormatting('fNewText')">✖ Remove formatting</button>
+      <span class="paste-note">Formatting is kept when you save it as the new Original.</span>
+    </div>
+    <div class="rte paste-box" id="fNewText" contenteditable="true" data-placeholder="Paste the current version of the guide here, then click Compare." style="min-height:120px;"></div>
     <div id="diffResult"></div>
     <div class="modal-actions">
       <button class="muted-btn" onclick="closeDiff()">Close</button>
@@ -416,6 +462,7 @@ let viewState = {};   // entry id -> "original" | "custom"
 let diffId = null;    // entry currently being update-checked
 let compact = false;  // compact view collapses card bodies
 let expandState = {}; // entry id -> true when expanded in compact mode
+let dueEditState = {}; // entry id -> true when its update-check date editor is open
 
 /* ---------- Seed data (shown only the very first time) ---------- */
 const TYPES = ["KBA", "BBP", "SharePoint", "Custom"];
@@ -456,9 +503,36 @@ const SAMPLES = [
 function loadSamples() {
   try { if (localStorage.getItem("kb_samples_v1")) return; } catch (e) {}
   entries = SAMPLES.concat(entries);
+  migrate();
   save();
   try { localStorage.setItem("kb_samples_v1", "1"); } catch (e) {}
 }
+
+/* ---------- Update-check dates ---------- */
+const CHECK_EVERY_MONTHS = 1;   // default: recommend a re-check 1 month out
+function isoOf(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function parseISO(iso) {
+  const p = (iso || "").split("-").map(Number);
+  return new Date(p[0], (p[1] || 1) - 1, p[2] || 1);
+}
+function todayISO() { return isoOf(new Date()); }
+function addMonths(iso, n) {
+  const d = parseISO(iso), day = d.getDate();
+  d.setMonth(d.getMonth() + n);
+  if (d.getDate() !== day) d.setDate(0);   // clamp e.g. Jan 31 + 1 month -> Feb 28
+  return isoOf(d);
+}
+function addDays(iso, n) { const d = parseISO(iso); d.setDate(d.getDate() + n); return isoOf(d); }
+function defaultNextCheck() { return addMonths(todayISO(), CHECK_EVERY_MONTHS); }
+function daysUntil(iso) { return Math.round((parseISO(iso) - parseISO(todayISO())) / 86400000); }
+function fmtDate(iso) {
+  if (!iso) return "";
+  try { return parseISO(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); }
+  catch (e) { return iso; }
+}
+function plural(n, w) { return n + " " + w + (n === 1 ? "" : "s"); }
 
 /* ---------- Utilities ---------- */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -468,6 +542,7 @@ function load() {
     if (raw) { entries = JSON.parse(raw); migrate(); return; }
   } catch (e) {}
   entries = SEED.slice();
+  migrate();
   save();
 }
 function migrate() {
@@ -478,6 +553,9 @@ function migrate() {
     if (e.guide === undefined) { e.guide = e.custom ? plainToHtml(e.custom) : ""; changed = true; }
     if (e.version === undefined) { e.version = ""; changed = true; }
     if (e.siteIds === undefined) { e.siteIds = []; changed = true; }
+    if (e.originalHtml === undefined) { e.originalHtml = ""; changed = true; }
+    if (!e.nextCheck) { e.nextCheck = defaultNextCheck(); changed = true; }
+    if (e.lastChecked === undefined) { e.lastChecked = ""; changed = true; }
     if (e.body !== undefined) { delete e.body; changed = true; }
     if (e.custom !== undefined) { delete e.custom; changed = true; }
   });
@@ -505,9 +583,38 @@ function saveSites() {
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+function sanitizeHtml(html) {
+  const box = document.createElement("div");
+  box.innerHTML = html || "";
+  box.querySelectorAll("script,style,iframe,object,embed,link,meta,form,input,select,textarea,button").forEach(n => n.remove());
+  box.querySelectorAll("*").forEach(el => {
+    Array.from(el.attributes).forEach(a => {
+      const n = a.name.toLowerCase();
+      if (n.startsWith("on")) el.removeAttribute(a.name);
+      else if ((n === "href" || n === "src") && /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name);
+    });
+  });
+  return box.innerHTML;
+}
+function isBlankHtml(html) {
+  return /^(\s|&nbsp;|<br\s*\/?>|<\/?(p|div|span)[^>]*>)*$/i.test(html || "");
+}
+/* Read a contenteditable field as both its rich HTML and its plain-text mirror */
+function readRich(id) {
+  const el = document.getElementById(id);
+  const html = sanitizeHtml(el.innerHTML.trim());
+  const text = (el.innerText || el.textContent || "").replace(/\u00a0/g, " ").replace(/\r/g, "").trim();
+  return { html: isBlankHtml(html) ? "" : html, text };
+}
+function stripFormatting(id) {
+  const el = document.getElementById(id);
+  const text = (el.innerText || el.textContent || "").replace(/\u00a0/g, " ");
+  el.textContent = text;
+  el.focus();
+}
 function plainToHtml(text) {
-  return (text || "").split("\n").map(l => l.trim())
-    .map(l => l ? `<p>${escapeHtml(l)}</p>` : "").join("");
+  return (text || "").split("\n")
+    .map(l => l.trim() ? `<p>${escapeHtml(l)}</p>` : "<p><br></p>").join("");
 }
 function highlight(text, q) {
   const safe = escapeHtml(text);
@@ -582,19 +689,19 @@ function matches(e) {
   return matchScore(e, terms) > 0;
 }
 function bodyToHtml(body, q) {
-  const lines = (body || "").split("\n").map(l => l.trim()).filter(Boolean);
-  if (lines.length === 0) return "";
-  // If it looks like a list (2+ lines), render as ordered steps
-  if (lines.length >= 2) {
-    return `<ol class="steps">${lines.map(l =>
-      `<li>${highlight(l.replace(/^[-\d.)\s]+/, ""), q)}</li>`).join("")}</ol>`;
-  }
-  return `<p class="body-text">${highlight(lines[0], q)}</p>`;
+  // Show the text exactly as it was written — line breaks and spacing preserved, nothing renumbered.
+  if (!(body || "").trim()) return "";
+  return `<p class="body-text">${highlight(body.replace(/\s+$/, ""), q)}</p>`;
+}
+function originalHtmlFor(e) {
+  // Rich paste keeps its own formatting; older plain-text entries render as typed.
+  if (e.originalHtml && e.originalHtml.trim()) return `<div class="orig-html">${e.originalHtml}</div>`;
+  return bodyToHtml(e.original, query);
 }
 function entryContentHtml(e) {
   const hasGuide = e.guide && e.guide.trim();
   if (!hasGuide) {
-    return bodyToHtml(e.original, query);
+    return originalHtmlFor(e);
   }
   const showOriginal = viewState[e.id] === "original";
   const toggle = `<div class="view-toggle">
@@ -602,11 +709,60 @@ function entryContentHtml(e) {
     <button class="${showOriginal ? "active" : ""}" onclick="setView('${e.id}','original')">Original</button>
   </div>`;
   const content = showOriginal
-    ? bodyToHtml(e.original, query)
+    ? originalHtmlFor(e)
     : `<div class="guide-content">${e.guide}</div>`;
   return toggle + content;
 }
 function setView(id, mode) { viewState[id] = mode; render(); }
+
+/* ---------- Update-check countdown (per entry) ---------- */
+function dueBadgeHtml(e) {
+  if (!e.nextCheck) return "";
+  const d = daysUntil(e.nextCheck);
+  let cls = "", text;
+  if (d < 0)        { cls = " due-over"; text = "\u26A0\uFE0F Check overdue by " + plural(-d, "day"); }
+  else if (d === 0) { cls = " due-over"; text = "\uD83D\uDD14 Check for an update today"; }
+  else if (d <= 7)  { cls = " due-soon"; text = "\uD83D\uDD14 Check in " + plural(d, "day"); }
+  else              { text = "\uD83D\uDD53 Check in " + plural(d, "day"); }
+  const title = "Recommended update check: " + fmtDate(e.nextCheck) + " \u2014 click to change or reset";
+  return `<span class="due${cls}" title="${escapeHtml(title)}" onclick="toggleDueEdit(event,'${e.id}')">${text}</span>`;
+}
+function dueRowHtml(e) {
+  const last = e.lastChecked ? `<span class="due-last">Last checked ${escapeHtml(fmtDate(e.lastChecked))}</span>` : "";
+  return `<div class="due-row" onclick="event.stopPropagation()">
+    <label for="due-${e.id}">Plan to check on</label>
+    <input type="date" id="due-${e.id}" value="${escapeHtml(e.nextCheck || "")}" onchange="setDue('${e.id}', this.value)">
+    <button onclick="snoozeDue('${e.id}', 7)">+1 week</button>
+    <button onclick="snoozeDue('${e.id}', 90)">+3 months</button>
+    <button onclick="markChecked('${e.id}')">\u2713 Checked today \u2014 reset to 1 month</button>
+    ${last}
+  </div>`;
+}
+function toggleDueEdit(ev, id) {
+  if (ev) ev.stopPropagation();
+  dueEditState[id] = !dueEditState[id];
+  render();
+}
+function setDue(id, iso) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  e.nextCheck = iso || defaultNextCheck();
+  save(); render();
+}
+function snoozeDue(id, days) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  // Snooze from today, so an overdue entry moves genuinely forward
+  e.nextCheck = addDays(todayISO(), days);
+  save(); render();
+}
+function markChecked(id, silent) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  e.lastChecked = todayISO();
+  e.nextCheck = defaultNextCheck();
+  if (!silent) { save(); render(); }
+}
 
 function render() {
   renderCategories();
@@ -641,9 +797,11 @@ function render() {
     const head = `<div class="card-head" ${compact ? `onclick="toggleExpand('${e.id}')"` : ""}>
         ${compact ? `<span class="chevron ${expanded ? "open" : ""}">▶</span>` : ""}
         <h3>${highlight(e.title, query)}</h3>
+        ${dueBadgeHtml(e)}
       </div>
       <div class="meta"><span class="type-badge t-${type}">${escapeHtml(type)}</span>${refHtml}${verHtml}
-      <span class="tag">${escapeHtml(e.category || "Uncategorized")}</span></div>`;
+      <span class="tag">${escapeHtml(e.category || "Uncategorized")}</span></div>
+      ${dueEditState[e.id] ? dueRowHtml(e) : ""}`;
     const bodyHtml = expanded ? `
       ${entryContentHtml(e)}
       ${links ? `<div class="links">${links}</div>` : ""}
@@ -669,7 +827,7 @@ function openEditor(id) {
     document.getElementById("fRef").value = e.ref || "";
     document.getElementById("fVersion").value = e.version || "";
     document.getElementById("fCategory").value = e.category || "";
-    document.getElementById("fOriginal").value = e.original || "";
+    setRich("fOriginal", e.originalHtml, e.original);
     document.getElementById("fLinks").value = (e.links || []).map(l => l[0] === l[1] ? l[1] : `${l[0]} | ${l[1]}`).join("\n");
     renderSiteChecks(e.siteIds || []);
   } else {
@@ -680,13 +838,17 @@ function openEditor(id) {
     document.getElementById("fRef").value = "";
     document.getElementById("fVersion").value = "";
     document.getElementById("fCategory").value = activeCat !== "All" ? activeCat : "";
-    document.getElementById("fOriginal").value = "";
+    setRich("fOriginal", "", "");
     document.getElementById("fLinks").value = "";
     renderSiteChecks([]);
   }
   updateEditorMode();
   overlay.classList.add("show");
   document.getElementById("fTitle").focus();
+}
+function setRich(id, html, fallbackText) {
+  document.getElementById(id).innerHTML =
+    (html && html.trim()) ? html : plainToHtml(fallbackText);
 }
 function updateEditorMode() {
   const type = document.getElementById("fType").value;
@@ -701,8 +863,10 @@ function updateEditorMode() {
   document.getElementById("lblOriginal").textContent =
     isCustom ? "Details / Steps" : "Original text (paste the official guide here)";
   document.getElementById("hintOriginal").textContent =
-    isCustom ? "Your own guide — one step per line shows as a numbered list. Use 🎨 Customize after saving to add formatting and images."
+    isCustom ? "Your own notes — written or pasted, they display exactly as you leave them here. Use 🎨 Customize after saving to add images."
              : "Kept untouched as your source of truth. After saving, use 🎨 Customize to build it into a styled guide with images.";
+  document.getElementById("fOriginal").setAttribute("data-placeholder",
+    isCustom ? "Type or paste your notes here." : "Paste the official KBA / BBP / SharePoint text here, exactly as-is.");
 }
 function closeEditor() { document.getElementById("overlay").classList.remove("show"); hideCatOptions(); }
 
@@ -729,13 +893,15 @@ function saveEntry() {
   if (!title) { alert("Please enter a title."); return; }
   const type = document.getElementById("fType").value || "Custom";
   const hasNumber = type === "KBA" || type === "BBP";
+  const origBox = readRich("fOriginal");
   const data = {
     title,
     type,
     ref: hasNumber ? document.getElementById("fRef").value.trim() : "",
     version: type === "Custom" ? "" : document.getElementById("fVersion").value.trim(),
     category: document.getElementById("fCategory").value.trim() || "Uncategorized",
-    original: document.getElementById("fOriginal").value.trim(),
+    original: origBox.text,
+    originalHtml: origBox.html,
     siteIds: Array.from(document.querySelectorAll("#siteChecks input:checked")).map(c => c.value),
     links: parseLinks(document.getElementById("fLinks").value)
   };
@@ -744,7 +910,7 @@ function saveEntry() {
     const e = entries.find(x => x.id === id);
     Object.assign(e, data);
   } else {
-    entries.unshift(Object.assign({ id: uid() }, data));
+    entries.unshift(Object.assign({ id: uid(), nextCheck: defaultNextCheck(), lastChecked: "" }, data));
   }
   save(); render(); closeEditor();
 }
@@ -762,7 +928,7 @@ function openDiff(id) {
   const e = entries.find(x => x.id === id);
   document.getElementById("diffFor").innerHTML =
     `Comparing against the saved <b>Original</b> of “${escapeHtml(e.title)}”${e.version ? " (" + escapeHtml(e.version) + ")" : ""}.`;
-  document.getElementById("fNewText").value = "";
+  document.getElementById("fNewText").innerHTML = "";
   document.getElementById("diffResult").innerHTML = "";
   document.getElementById("applyBtn").style.display = "none";
   document.getElementById("diffOverlay").classList.add("show");
@@ -789,7 +955,7 @@ function diffLines(a, b) {
 }
 function runDiff() {
   const e = entries.find(x => x.id === diffId);
-  const newText = document.getElementById("fNewText").value;
+  const newText = readRich("fNewText").text;
   if (!newText.trim()) { alert("Paste the new text first."); return; }
   const rows = diffLines((e.original || "").trim(), newText.trim());
   const adds = rows.filter(r => r.t === "add").length;
@@ -797,7 +963,10 @@ function runDiff() {
   const result = document.getElementById("diffResult");
 
   if (adds === 0 && dels === 0) {
-    result.innerHTML = `<div class="diff-summary" style="color:#2e7d32;">✅ No changes — this matches your saved Original exactly.</div>`;
+    markChecked(e.id, true);
+    save(); render();
+    result.innerHTML = `<div class="diff-summary" style="color:#2e7d32;">✅ No changes — this matches your saved Original exactly.</div>
+      <div class="orig-note">Marked as checked today. The next check is due ${escapeHtml(fmtDate(e.nextCheck))}.</div>`;
     document.getElementById("applyBtn").style.display = "none";
     return;
   }
@@ -813,10 +982,12 @@ function runDiff() {
 }
 function applyUpdate() {
   const e = entries.find(x => x.id === diffId);
-  const newText = document.getElementById("fNewText").value.trim();
+  const fresh = readRich("fNewText");
   const newVer = prompt("Optional: new version label for this update (leave blank to keep current)", e.version || "");
-  e.original = newText;
+  e.original = fresh.text;
+  e.originalHtml = fresh.html;
   if (newVer !== null && newVer.trim() !== "") e.version = newVer.trim();
+  markChecked(e.id, true);
   save();
   const hadGuide = e.guide && e.guide.trim();
   closeDiff();
@@ -832,7 +1003,7 @@ function openCustom(id) {
   document.getElementById("customTitle").textContent = "🎨 " + (e.guide && e.guide.trim() ? "Edit guide: " : "Customize: ") + e.title;
   const rte = document.getElementById("rteBody");
   // Start from the existing guide, or seed from the Original text so there's something to shape.
-  rte.innerHTML = (e.guide && e.guide.trim()) ? e.guide : plainToHtml(e.original);
+  rte.innerHTML = (e.guide && e.guide.trim()) ? e.guide : (e.originalHtml || plainToHtml(e.original));
   document.getElementById("customOverlay").classList.add("show");
   rte.focus();
 }
@@ -848,7 +1019,7 @@ function addRteLink() {
 function resetGuideToOriginal() {
   const e = entries.find(x => x.id === customId);
   if (confirm("Replace the editor content with a fresh copy of the Original text? Your current unsaved guide edits will be lost.")) {
-    document.getElementById("rteBody").innerHTML = plainToHtml(e.original);
+    document.getElementById("rteBody").innerHTML = e.originalHtml || plainToHtml(e.original);
   }
 }
 function insertImage(ev) {
@@ -880,7 +1051,7 @@ function saveCustom() {
   const e = entries.find(x => x.id === customId);
   const html = document.getElementById("rteBody").innerHTML.trim();
   // Treat an empty editor (just an empty paragraph / break) as "no guide"
-  e.guide = /^(<br>|<p>(<br>)?<\/p>|\s)*$/i.test(html) ? "" : html;
+  e.guide = isBlankHtml(html) ? "" : sanitizeHtml(html);
   save();
   if (e.guide) viewState[e.id] = "guide";
   closeCustom();
@@ -922,6 +1093,10 @@ function importData(ev) {
           impSites.forEach(s => { if (!sids.has(s.id)) sites.push(s); });
         }
       }
+      entries.forEach(e => {
+        if (e.originalHtml) e.originalHtml = sanitizeHtml(e.originalHtml);
+        if (e.guide) e.guide = sanitizeHtml(e.guide);
+      });
       migrate(); saveSites(); save(); render();
     } catch (e) { alert("That file could not be read as a valid backup."); }
   };
