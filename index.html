@@ -45,10 +45,11 @@
     box-shadow: var(--shadow);
   }
   .bar {
-    max-width: 1100px; margin: 0 auto; padding: 12px 20px;
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    max-width: 1360px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .bar > button { flex: none; white-space: nowrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; flex: none; white-space: nowrap; }
   .dot { width: 26px; height: 18px; position: relative; }
   .dot::before, .dot::after {
     content: ""; position: absolute; top: 0; width: 18px; height: 18px; border-radius: 50%;
@@ -56,7 +57,7 @@
   .dot::before { left: 0; background: var(--accent); }
   .dot::after { right: 0; background: var(--accent-2); mix-blend-mode: multiply; opacity: .9; }
   .search {
-    flex: 1; min-width: 200px; position: relative;
+    flex: 1 1 150px; min-width: 0; position: relative;
   }
   .search input {
     width: 100%; padding: 11px 14px 11px 40px; font-size: 15px;
@@ -408,12 +409,13 @@
     display: inline-block; min-width: 17px; padding: 0 5px; margin-left: 6px; border-radius: 9px;
     background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; text-align: center;
   }
+  .nav-badge:empty { visibility: hidden; }   /* keeps the space so the bar never reflows */
   .viewnav button.active .nav-badge { background: rgba(255,255,255,.28); }
 
   /* Journal */
   .hidden { display: none !important; }
   .viewnav { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; flex: none; }
-  .viewnav button { border: none; border-radius: 0; padding: 9px 13px; font-size: 13px; font-weight: 600; background: var(--panel-2); }
+  .viewnav button { border: none; border-radius: 0; padding: 9px 13px; font-size: 13px; font-weight: 600; background: var(--panel-2); white-space: nowrap; }
   .viewnav button.active { background: var(--accent); color: #fff; }
   .viewnav button:not(.active):hover { background: var(--border); }
   .j-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -1877,7 +1879,7 @@ function renderTicketBadge() {
   const el = document.getElementById("navTicketBadge");
   if (!el) return;
   const open = openTickets(todayISO());
-  el.className = open ? "nav-badge" : "";
+  el.className = "nav-badge";        // stays in the layout even when empty
   el.textContent = open ? open : "";
   el.title = open ? plural(open, "open visit") + " today" : "";
 }
