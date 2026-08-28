@@ -420,15 +420,57 @@
   .nav-badge:empty { visibility: hidden; }   /* keeps the space so the bar never reflows */
   .viewnav button.active .nav-badge { background: rgba(255,255,255,.28); }
 
-  /* Corner warning */
+  /* To-do list */
+  .td-section { margin-bottom: 22px; }
+  .td-head {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .td-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 13px; margin-bottom: 7px;
+    background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--link);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .td-row.done { border-left-color: #2e7d32; opacity: .6; }
+  .td-row.done .td-title { text-decoration: line-through; }
+  .td-row.overdue { border-left-color: var(--accent); }
+  .td-row input[type=checkbox] { width: auto; margin: 3px 0 0; flex: none; cursor: pointer; }
+  .td-main { flex: 1; min-width: 0; }
+  .td-title { font-size: 15px; font-weight: 600; }
+  .td-when { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .td-time {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; font-weight: 700;
+    padding: 2px 7px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border); flex: none;
+  }
+  .td-row.overdue .td-time { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .td-acts { display: flex; gap: 6px; flex: none; }
+  .td-acts button { padding: 4px 8px; font-size: 12px; }
+  .td-form { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+  .td-form .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .td-form .row > div { flex: 1; min-width: 130px; }
+  .td-form label { margin-top: 0; }
+  .td-days { display: flex; gap: 4px; flex-wrap: wrap; }
+  .td-days label {
+    display: flex; align-items: center; gap: 5px; margin: 0; padding: 5px 8px; font-weight: 600; font-size: 12px;
+    color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 4px; background: var(--panel-2);
+  }
+  .td-days input { width: auto; margin: 0; }
+  .td-empty { color: var(--muted); font-size: 14px; padding: 10px 2px; }
+
+  /* Corner warnings */
+  .toast-stack {
+    position: fixed; right: 20px; bottom: 20px; z-index: 60;
+    display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-end;
+  }
   .toast {
-    position: fixed; right: 20px; bottom: 20px; z-index: 60; width: 310px; max-width: calc(100vw - 40px);
+    display: none; width: 310px; max-width: calc(100vw - 40px);
     background: var(--panel); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--accent);
     border-radius: var(--radius); padding: 14px 16px; box-shadow: 0 6px 24px rgba(16,24,40,.18);
-    opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .18s, transform .18s;
   }
   [data-theme="dark"] .toast { box-shadow: 0 8px 28px rgba(0,0,0,.5); }
-  .toast.show { opacity: 1; transform: none; pointer-events: auto; }
+  .toast.show { display: block; }
+  .toast.todo { border-left-color: var(--link); }
   .toast-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
   .toast-text { font-size: 13px; color: var(--muted); }
   .toast-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
@@ -466,6 +508,7 @@
       <button id="navKb" class="active" onclick="setMode('kb')">📚 Guides</button>
       <button id="navJournal" onclick="setMode('journal')">📓 Journal</button>
       <button id="navTickets" onclick="setMode('tickets')">🎫 Tickets<span id="navTicketBadge"></span></button>
+      <button id="navTodo" onclick="setMode('todo')">✅ To-Do<span id="navTodoBadge"></span></button>
     </div>
     <div class="search">
       <input id="search" type="text" placeholder="Search guides, steps, links…" autocomplete="off">
@@ -560,6 +603,55 @@
   </div>
 </main>
 
+<main id="todoView" class="hidden">
+  <aside>
+    <div class="aside-label">Today</div>
+    <div style="padding:4px 11px 10px;">
+      <div id="todoDate" style="font-size:14px;font-weight:600;"></div>
+      <div id="todoProgress" class="hint" style="margin-top:4px;"></div>
+    </div>
+    <div class="aside-divider"></div>
+    <div class="aside-label">Show</div>
+    <div id="todoFilters"></div>
+  </aside>
+  <div>
+    <div class="td-section">
+      <div class="td-head">Due today</div>
+      <div id="todoToday"></div>
+    </div>
+    <div class="td-section">
+      <div class="td-head">All recurring tasks</div>
+      <div id="todoAll"></div>
+    </div>
+    <div class="td-section">
+      <div class="td-head">Add a task</div>
+      <div class="td-form">
+        <div class="row">
+          <div style="flex:3;min-width:200px;">
+            <label>What needs doing?</label>
+            <input type="text" id="tdTitle" placeholder="e.g. Check emails" autocomplete="off">
+          </div>
+          <div style="flex:0 0 120px;min-width:110px;">
+            <label>Time</label>
+            <input type="time" id="tdTime" value="08:00">
+          </div>
+        </div>
+        <label>How often?</label>
+        <select id="tdSched" onchange="renderTodoDayPicker()">
+          <option value="weekdays">Weekdays (Mon–Fri)</option>
+          <option value="daily">Every day</option>
+          <option value="days">Certain days…</option>
+          <option value="once">One-off, on a date…</option>
+        </select>
+        <div id="tdSchedExtra"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button class="primary" onclick="addTodo()">Add task</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
 <aside class="sites-panel">
   <div class="sp-head">🌐 My Sites
     <button onclick="openSites()" title="Add, edit and group your sites">⚙️ Manage</button>
@@ -568,13 +660,24 @@
 </aside>
 </div>
 
-<div class="toast" id="ticketAlert" role="status" aria-live="polite">
-  <div class="toast-title">⚠️ Visits still open</div>
-  <div class="toast-text" id="ticketAlertText"></div>
-  <div class="toast-acts">
-    <button class="primary" onclick="reviewTicketAlert()">Review log</button>
-    <button onclick="snoozeTicketAlert(30)">In 30 min</button>
-    <button class="muted-btn" onclick="snoozeTicketAlertToday()">Not today</button>
+<div class="toast-stack">
+  <div class="toast" id="ticketAlert" role="status" aria-live="polite">
+    <div class="toast-title">⚠️ Visits still open</div>
+    <div class="toast-text" id="ticketAlertText"></div>
+    <div class="toast-acts">
+      <button class="primary" onclick="reviewTicketAlert()">Review log</button>
+      <button onclick="snoozeTicketAlert(30)">In 30 min</button>
+      <button class="muted-btn" onclick="snoozeTicketAlertToday()">Not today</button>
+    </div>
+  </div>
+  <div class="toast todo" id="todoAlert" role="status" aria-live="polite">
+    <div class="toast-title">⏰ Task due</div>
+    <div class="toast-text" id="todoAlertText"></div>
+    <div class="toast-acts">
+      <button class="primary" onclick="reviewTodoAlert()">Open list</button>
+      <button onclick="snoozeTodoAlert(30)">In 30 min</button>
+      <button class="muted-btn" onclick="snoozeTodoAlertToday()">Not today</button>
+    </div>
   </div>
 </div>
 
@@ -702,7 +805,7 @@
     <div class="hint" style="margin-bottom:12px;">Save the portals you log into often — assigning, tracking, shipping, etc. Then tick them on any entry from the New Entry form.</div>
     <label class="reuse-opt" style="margin-top:0;">
       <input type="checkbox" id="siteReuseChk" onchange="toggleSiteReuse(this.checked)">
-      <span>Give each site its own tab<span class="hint" style="margin-top:2px;">Clicking a site returns to the tab it is already open in, instead of opening another. Drag those tabs into a second window once and every later click lands there. Ctrl/⌘-click still opens a fresh tab.</span></span>
+      <span>Give each site its own tab<span class="hint" style="margin-top:2px;">A site opens in the background the first time; clicking it again jumps to the tab it is already in rather than opening another. Drag those tabs into a second window once and every later click lands there. Ctrl/⌘-click still opens a fresh tab.</span></span>
     </label>
     <label style="margin-top:0;">Groups <span style="font-weight:400;">(sort your sites by the kind of task they're for)</span></label>
     <div class="grp-box" id="groupsBox"></div>
@@ -739,11 +842,15 @@ const SITES_KEY = "kb_sites_v1";
 const JOURNAL_KEY = "kb_journal_v1";
 const GROUPS_KEY = "kb_sitegroups_v1";
 const TICKETS_KEY = "kb_tickets_v1";
+const TODOS_KEY = "kb_todos_v1";
 let entries = [];
 let sites = [];
 let siteGroups = [];   // [{ id, name, color }] — user-defined, e.g. "Tracking", "Shipping"
 const GROUP_PALETTE = ["#1565c0", "#2e7d32", "#6a1b9a", "#cc0000", "#f79e1b", "#00838f", "#5d4037", "#37474f"];
 let journal = [];      // [{ date: "YYYY-MM-DD", html, updated }]
+let todos = [];        // [{ id, title, sched, days, date, time, doneDates }]
+let todoFilter = "open";
+let editingTodoId = null;
 let tickets = [];      // [{ id, date, eid, first, last, reason, created, done, doneAt }]
 let activeTicketDay = "";
 let editingTicketId = null;
@@ -873,6 +980,19 @@ function loadSites() {
     { id: uid(), name: "Shipping Portal", url: "https://example.com/shipping", note: "Raise a shipment, print a label, chase a delivery.", groupId: g[2] ? g[2].id : "" }
   ];
   saveSites();
+}
+function loadTodos() {
+  try {
+    const raw = localStorage.getItem(TODOS_KEY);
+    if (raw) { todos = JSON.parse(raw) || []; return; }
+  } catch (e) {}
+  todos = [{ id: uid(), title: "Check emails", sched: "weekdays", days: [1, 2, 3, 4, 5], date: "", time: "08:00", doneDates: [] }];
+  saveTodos();
+}
+function saveTodos() {
+  todos.forEach(t => { if (!Array.isArray(t.doneDates)) t.doneDates = []; });
+  try { localStorage.setItem(TODOS_KEY, JSON.stringify(todos)); }
+  catch (e) { alert("Could not save your to-do list — browser storage may be full."); }
 }
 function loadTickets() {
   try {
@@ -1129,7 +1249,10 @@ function markChecked(id, silent) {
 function render() {
   renderSitesPanel();
   renderTicketBadge();
+  renderTodoBadge();
   renderTicketAlert();
+  renderTodoAlert();
+  if (mode === "todo") return renderTodo();
   if (mode === "tickets") return renderTickets();
   if (mode === "journal") return renderJournal();
   renderCategories();
@@ -1429,7 +1552,7 @@ function saveCustom() {
 /* ---------- Export / Import ---------- */
 function exportData() {
   if (mode === "journal") flushJournalSave();
-  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, siteGroups, journal, tickets };
+  const payload = { kb: 1, exported: new Date().toISOString(), entries, sites, siteGroups, journal, tickets, todos };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1446,7 +1569,7 @@ function importData(ev) {
     try {
       const data = JSON.parse(reader.result);
       // Accept both the old format (a plain array of entries) and the new {entries, sites} object
-      let impEntries, impSites = null, impJournal = null, impGroups = null, impTickets = null;
+      let impEntries, impSites = null, impJournal = null, impGroups = null, impTickets = null, impTodos = null;
       if (Array.isArray(data)) { impEntries = data; }
       else if (data && Array.isArray(data.entries)) {
         impEntries = data.entries;
@@ -1454,18 +1577,21 @@ function importData(ev) {
         impJournal = Array.isArray(data.journal) ? data.journal : null;
         impGroups = Array.isArray(data.siteGroups) ? data.siteGroups : null;
         impTickets = Array.isArray(data.tickets) ? data.tickets : null;
+        impTodos = Array.isArray(data.todos) ? data.todos : null;
       }
       else throw new Error("bad format");
 
       const parts = impEntries.length + " entries" + (impSites ? ", " + impSites.length + " sites" : "") +
         (impJournal ? ", " + plural(impJournal.length, "journal day") : "") +
-        (impTickets ? ", " + plural(impTickets.length, "logged visit") : "");
+        (impTickets ? ", " + plural(impTickets.length, "logged visit") : "") +
+        (impTodos ? ", " + plural(impTodos.length, "task") : "");
       if (confirm("Import " + parts + "?\n\nOK = replace everything\nCancel = merge with existing")) {
         entries = impEntries;
         if (impSites) sites = impSites;
         if (impGroups) siteGroups = impGroups;
         if (impJournal) journal = impJournal;
         if (impTickets) tickets = impTickets;
+        if (impTodos) todos = impTodos;
       } else {
         const ids = new Set(entries.map(e => e.id));
         impEntries.forEach(e => { if (!e.id || ids.has(e.id)) e.id = uid(); entries.push(e); });
@@ -1481,6 +1607,10 @@ function importData(ev) {
           const tids = new Set(tickets.map(t => t.id));
           impTickets.forEach(t => { if (!tids.has(t.id)) tickets.push(t); });
         }
+        if (impTodos) {
+          const dids = new Set(todos.map(t => t.id));
+          impTodos.forEach(t => { if (!dids.has(t.id)) todos.push(t); });
+        }
         if (impJournal) {
           impJournal.forEach(d => {
             const mine = findDay(d.date);
@@ -1494,7 +1624,7 @@ function importData(ev) {
         if (e.guide) e.guide = sanitizeHtml(e.guide);
       });
       journal.forEach(d => { if (d.html) d.html = sanitizeHtml(d.html); });
-      migrate(); saveGroups(); saveSites(); saveJournal(); saveTickets(); save();
+      migrate(); saveGroups(); saveSites(); saveJournal(); saveTickets(); saveTodos(); save();
       if (mode === "journal") { activeDay = ensureToday(); loadDayIntoEditor(); }
       render();
     } catch (e) { alert("That file could not be read as a valid backup."); }
@@ -1563,13 +1693,25 @@ function openSite(ev, id) {
   const s = sites.find(x => x.id === id);
   if (!s) return true;
   if (ev) ev.preventDefault();
+  const name = "kbsite_" + s.id;
   const held = siteWindows[id];
+  // Already open: just bring it forward, and leave the page it is on alone
   try {
-    if (held && !held.closed) { held.location.href = s.url; held.focus(); return false; }
-  } catch (e) { /* handle went stale; fall through and find the tab by name */ }
-  // No size features here: that is what keeps it a tab rather than a strip-less popup
-  const win = window.open(s.url, "kbsite_" + s.id);
-  if (win) { siteWindows[id] = win; try { win.focus(); } catch (e) {} }
+    if (held && !held.closed) { held.focus(); return false; }
+  } catch (e) { /* handle went stale; fall through and look the tab up by name */ }
+  // Opening with an empty URL hands back an existing tab WITHOUT navigating it,
+  // and gives a fresh blank tab when there is none. No size features, so it stays a tab.
+  let win = null;
+  try { win = window.open("", name); } catch (e) {}
+  if (!win) { window.open(s.url, name); return false; }   // blocked or unavailable: plain open
+  siteWindows[id] = win;
+  let isNew = false;
+  try { isNew = !win.location.href || win.location.href === "about:blank"; }
+  catch (e) { isNew = false; }   // reading it threw, so it is a live cross-origin tab: existing
+  if (!isNew) { try { win.focus(); } catch (e) {} return false; }
+  win.location.href = s.url;
+  // Newly opened: load it in the background and stay where you are
+  try { window.focus(); } catch (e) {}
   return false;
 }
 function renderGroups() {
@@ -1764,6 +1906,186 @@ function deleteSite(id) {
   refreshSitesUI();
 }
 
+/* ---------- To-do list (recurring tasks) ---------- */
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function dowOf(iso) { return parseISO(iso).getDay(); }
+function todoDueOn(t, iso) {
+  if (t.sched === "daily") return true;
+  if (t.sched === "weekdays") { const d = dowOf(iso); return d >= 1 && d <= 5; }
+  if (t.sched === "days") return (t.days || []).includes(dowOf(iso));
+  if (t.sched === "once") return t.date === iso;
+  return false;
+}
+function todoDone(t, iso) { return (t.doneDates || []).includes(iso); }
+function todosDueToday() {
+  const today = todoISO();
+  return todos.filter(t => todoDueOn(t, today))
+    .sort((a, b) => (a.time || "").localeCompare(b.time || "") || a.title.localeCompare(b.title));
+}
+function todoISO() { return todayISO(); }
+function fmtTime(hhmm) {
+  if (!hhmm) return "";
+  const p = hhmm.split(":");
+  const d = new Date(); d.setHours(+p[0] || 0, +p[1] || 0, 0, 0);
+  try { return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
+  catch (e) { return hhmm; }
+}
+function schedLabel(t) {
+  if (t.sched === "daily") return "Every day";
+  if (t.sched === "weekdays") return "Weekdays (Mon–Fri)";
+  if (t.sched === "days") return (t.days || []).slice().sort().map(d => DAY_NAMES[d]).join(", ") || "No days picked";
+  if (t.sched === "once") return "Once, on " + fmtDate(t.date);
+  return "";
+}
+function todoOverdue(t, now) {
+  now = now || new Date();
+  if (!todoDueOn(t, todoISO()) || todoDone(t, todoISO()) || !t.time) return false;
+  const p = t.time.split(":");
+  return (now.getHours() * 60 + now.getMinutes()) >= ((+p[0] || 0) * 60 + (+p[1] || 0));
+}
+function toggleTodo(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t) return;
+  const today = todoISO();
+  t.doneDates = t.doneDates || [];
+  if (todoDone(t, today)) t.doneDates = t.doneDates.filter(d => d !== today);
+  else {
+    t.doneDates.push(today);
+    if (t.doneDates.length > 120) t.doneDates = t.doneDates.slice(-120);   // keep the file small
+  }
+  saveTodos(); render();
+}
+function renderTodoDayPicker() {
+  const sched = document.getElementById("tdSched").value;
+  const box = document.getElementById("tdSchedExtra");
+  if (sched === "days") {
+    box.innerHTML = `<label>Which days?</label><div class="td-days">` +
+      DAY_NAMES.map((n, i) => `<label><input type="checkbox" class="td-day" value="${i}" ${i >= 1 && i <= 5 ? "checked" : ""}>${n}</label>`).join("") +
+      `</div>`;
+  } else if (sched === "once") {
+    box.innerHTML = `<label>On which day?</label><input type="date" id="tdDate" value="${todoISO()}">`;
+  } else box.innerHTML = "";
+}
+function readSchedule() {
+  const sched = document.getElementById("tdSched").value;
+  const days = Array.from(document.querySelectorAll(".td-day:checked")).map(c => +c.value);
+  if (sched === "days" && !days.length) { alert("Pick at least one day."); return null; }
+  const dateEl = document.getElementById("tdDate");
+  return { sched, days: sched === "days" ? days : [], date: sched === "once" ? (dateEl ? dateEl.value : todoISO()) : "" };
+}
+function addTodo() {
+  const titleEl = document.getElementById("tdTitle");
+  const title = titleEl.value.trim();
+  if (!title) { alert("Give the task a name first."); titleEl.focus(); return; }
+  const sch = readSchedule();
+  if (!sch) return;
+  todos.push(Object.assign({ id: uid(), title, time: document.getElementById("tdTime").value || "", doneDates: [] }, sch));
+  saveTodos();
+  titleEl.value = "";
+  titleEl.focus();
+  render();
+}
+function deleteTodo(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t || !confirm(`Delete “${t.title}” from your to-do list?`)) return;
+  todos = todos.filter(x => x.id !== id);
+  saveTodos(); render();
+}
+function editTodo(id) { editingTodoId = id; render(); }
+function cancelTodoEdit() { editingTodoId = null; render(); }
+function saveTodoEdit(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t) return;
+  const title = document.getElementById("td-title-" + id).value.trim();
+  if (!title) { alert("A task needs a name."); return; }
+  t.title = title;
+  t.time = document.getElementById("td-time-" + id).value || "";
+  t.sched = document.getElementById("td-sched-" + id).value;
+  if (t.sched === "days") {
+    const days = Array.from(document.querySelectorAll("#td-days-" + id + " input:checked")).map(c => +c.value);
+    if (!days.length) { alert("Pick at least one day."); return; }
+    t.days = days;
+  }
+  if (t.sched === "once") t.date = document.getElementById("td-date-" + id).value || todoISO();
+  editingTodoId = null;
+  saveTodos(); render();
+}
+function todoMatches(t) {
+  const terms = queryTerms();
+  if (!terms.length) return true;
+  const hay = (t.title + " " + schedLabel(t)).toLowerCase();
+  return terms.some(x => hay.includes(x));
+}
+function todoRowHtml(t, forToday) {
+  const today = todoISO(), done = todoDone(t, today), over = todoOverdue(t);
+  if (t.id === editingTodoId) {
+    const sel = v => t.sched === v ? "selected" : "";
+    return `<div class="td-row"><div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+      <input type="text" id="td-title-${t.id}" value="${escapeHtml(t.title)}">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <input type="time" id="td-time-${t.id}" value="${escapeHtml(t.time || "")}" style="width:auto;">
+        <select id="td-sched-${t.id}" style="width:auto;flex:1;min-width:150px;">
+          <option value="weekdays" ${sel("weekdays")}>Weekdays (Mon–Fri)</option>
+          <option value="daily" ${sel("daily")}>Every day</option>
+          <option value="days" ${sel("days")}>Certain days</option>
+          <option value="once" ${sel("once")}>One-off</option>
+        </select>
+      </div>
+      <div class="td-days" id="td-days-${t.id}">${DAY_NAMES.map((n, i) =>
+        `<label><input type="checkbox" value="${i}" ${(t.days || []).includes(i) ? "checked" : ""}>${n}</label>`).join("")}</div>
+      <input type="date" id="td-date-${t.id}" value="${escapeHtml(t.date || todoISO())}">
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button class="muted-btn" onclick="cancelTodoEdit()">Cancel</button>
+        <button class="primary" onclick="saveTodoEdit('${t.id}')">Save</button>
+      </div>
+    </div></div>`;
+  }
+  return `<div class="td-row${done ? " done" : ""}${!done && over && forToday ? " overdue" : ""}">
+    ${forToday ? `<input type="checkbox" ${done ? "checked" : ""} title="Mark done for today" onchange="toggleTodo('${t.id}')">` : ""}
+    <div class="td-main">
+      <div class="td-title">${highlight(t.title, query)}</div>
+      <div class="td-when">${escapeHtml(schedLabel(t))}${t.time ? " · " + escapeHtml(fmtTime(t.time)) : ""}${
+        forToday && over && !done ? " · <b>overdue</b>" : ""}</div>
+    </div>
+    ${t.time && forToday ? `<span class="td-time">${escapeHtml(fmtTime(t.time))}</span>` : ""}
+    <div class="td-acts">
+      <button title="Edit" onclick="editTodo('${t.id}')">✏️</button>
+      <button class="del" title="Delete" onclick="deleteTodo('${t.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+function setTodoFilter(f) { todoFilter = f; render(); }
+function renderTodo() {
+  const today = todoISO();
+  document.getElementById("todoDate").textContent = dayLabel(today);
+  const due = todosDueToday();
+  const doneCount = due.filter(t => todoDone(t, today)).length;
+  document.getElementById("todoProgress").textContent = due.length
+    ? `${doneCount} of ${due.length} done` : "Nothing scheduled today";
+  document.getElementById("todoFilters").innerHTML = [["open", "Still to do"], ["all", "Everything today"]]
+    .map(([k, label]) => `<div class="cat${todoFilter === k ? " active" : ""}" onclick="setTodoFilter('${k}')">
+      <span>${label}</span><span class="count">${k === "open" ? due.length - doneCount : due.length}</span></div>`).join("");
+
+  const shown = due.filter(todoMatches).filter(t => todoFilter === "all" || !todoDone(t, today));
+  document.getElementById("todoToday").innerHTML = shown.length
+    ? shown.map(t => todoRowHtml(t, true)).join("")
+    : `<div class="td-empty">${due.length ? "Everything scheduled for today is done. 🎉" : "Nothing scheduled for today."}</div>`;
+
+  const all = todos.filter(todoMatches).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  document.getElementById("todoAll").innerHTML = all.length
+    ? all.map(t => todoRowHtml(t, false)).join("")
+    : `<div class="td-empty">No tasks yet — add one below.</div>`;
+}
+function renderTodoBadge() {
+  const el = document.getElementById("navTodoBadge");
+  if (!el) return;
+  const today = todoISO();
+  const open = todosDueToday().filter(t => !todoDone(t, today)).length;
+  el.className = "nav-badge";
+  el.textContent = open ? open : "";
+  el.title = open ? plural(open, "task") + " still to do today" : "";
+}
+
 /* ---------- Ticket log (who came by, and what for) ---------- */
 function ticketsOn(date) {
   return tickets.filter(t => t.date === date).sort((a, b) => (a.created || "").localeCompare(b.created || ""));
@@ -1951,6 +2273,39 @@ function legacyCopy(text, done) {
   document.body.removeChild(ta);
   if (okCopy) done();
   else alert("Could not copy automatically. The text is:\n\n" + text);
+}
+
+/* ---------- Task reminder ---------- */
+const TODO_SNOOZE_KEY = "kb_todo_alert_snooze";
+let todoSnoozeUntil = 0;
+(function initTodoSnooze() {
+  try { todoSnoozeUntil = parseInt(localStorage.getItem(TODO_SNOOZE_KEY) || "0", 10) || 0; } catch (e) {}
+})();
+function todosOverdue(now) {
+  now = now || new Date();
+  if (now.getTime() < todoSnoozeUntil) return [];
+  return todosDueToday().filter(t => !todoDone(t, todoISO()) && todoOverdue(t, now));
+}
+function renderTodoAlert(now) {
+  const el = document.getElementById("todoAlert");
+  if (!el) return;
+  const late = todosOverdue(now);
+  if (!late.length) { el.classList.remove("show"); return; }
+  document.getElementById("todoAlertText").textContent = late.length === 1
+    ? `“${late[0].title}” was due at ${fmtTime(late[0].time)} and isn't ticked off.`
+    : `${late.length} tasks are past their time today, starting with “${late[0].title}”.`;
+  el.classList.add("show");
+}
+function setTodoSnooze(untilMs) {
+  todoSnoozeUntil = untilMs;
+  try { localStorage.setItem(TODO_SNOOZE_KEY, String(untilMs)); } catch (e) {}
+  document.getElementById("todoAlert").classList.remove("show");
+}
+function snoozeTodoAlert(mins) { setTodoSnooze(Date.now() + mins * 60000); }
+function snoozeTodoAlertToday() { const t = new Date(); t.setHours(24, 0, 0, 0); setTodoSnooze(t.getTime()); }
+function reviewTodoAlert() {
+  snoozeTodoAlert(30);
+  if (mode !== "todo") setMode("todo"); else render();
 }
 
 /* ---------- End-of-day reminder ---------- */
@@ -2146,12 +2501,13 @@ function renderJournal() {
   renderJournalDays();
   updateJournalCount();
 }
-const VIEWS = { kb: "kbView", journal: "journalView", tickets: "ticketsView" };
-const NAVS = { kb: "navKb", journal: "navJournal", tickets: "navTickets" };
+const VIEWS = { kb: "kbView", journal: "journalView", tickets: "ticketsView", todo: "todoView" };
+const NAVS = { kb: "navKb", journal: "navJournal", tickets: "navTickets", todo: "navTodo" };
 const PLACEHOLDERS = {
   kb: "Search guides, steps, links…",
   journal: "Search your journal…",
-  tickets: "Search the visit log by eID, name or reason…"
+  tickets: "Search the visit log by eID, name or reason…",
+  todo: "Search your tasks…"
 };
 function setMode(m) {
   if (m === mode) return;
@@ -2175,6 +2531,7 @@ function setMode(m) {
     editingTicketId = null;
     if (!activeTicketDay) activeTicketDay = todayISO();
   }
+  if (m === "todo") { editingTodoId = null; renderTodoDayPicker(); }
   render();
 }
 
@@ -2220,9 +2577,13 @@ document.getElementById("journalBody").addEventListener("input", scheduleJournal
 document.getElementById("journalBody").addEventListener("blur", flushJournalSave);
 window.addEventListener("beforeunload", () => { if (mode === "journal") flushJournalSave(); });
 // Watch the clock so the reminder appears as soon as the cut-off passes
-setInterval(renderTicketAlert, 30000);
+setInterval(() => { renderTicketAlert(); renderTodoAlert(); if (mode === "todo") renderTodo(); }, 30000);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") renderTicketAlert();
+  if (document.visibilityState !== "visible") return;
+  renderTicketAlert(); renderTodoAlert();
+});
+document.getElementById("tdTitle").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); addTodo(); }
 });
 // If the tab is left open overnight, come back to a fresh page for the new day
 document.addEventListener("visibilitychange", () => {
@@ -2268,6 +2629,7 @@ loadGroups();
 loadSites();
 loadJournal();
 loadTickets();
+loadTodos();
 loadSamples();
 ensureToday();
 activeTicketDay = todayISO();
@@ -2275,7 +2637,8 @@ activeTicketDay = todayISO();
   let m;
   try { m = localStorage.getItem("kb_mode"); } catch (e) {}
   activeDay = todayISO();
-  if (m === "journal" || m === "tickets") setMode(m); else render();
+  renderTodoDayPicker();
+  if (m === "journal" || m === "tickets" || m === "todo") setMode(m); else render();
 })();
 </script>
 </body>
