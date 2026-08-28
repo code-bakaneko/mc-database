@@ -304,6 +304,7 @@
     display: flex; align-items: center; gap: 8px; padding: 5px 8px; margin-bottom: 3px;
     border: 1px solid var(--border); border-radius: 4px; font-size: 13px;
   }
+  .site-row .grp-move { margin-right: 1px; }
   .site-row .s-name { font-weight: 600; flex: 0 1 auto; max-width: 42%; }
   .site-row .s-name, .site-row .s-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .site-row .s-note { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--muted); }
@@ -1759,6 +1760,17 @@ function renameGroup(id, name) {
   g.name = name.trim();
   saveGroups(); refreshSitesUI();
 }
+function moveSite(id, dir) {
+  // Swap with the nearest site in the same group; sites of other groups in between are skipped
+  const i = sites.findIndex(s => s.id === id);
+  if (i < 0) return;
+  const gid = sites[i].groupId || "";
+  let j = i + dir;
+  while (j >= 0 && j < sites.length && (sites[j].groupId || "") !== gid) j += dir;
+  if (j < 0 || j >= sites.length) return;
+  sites.splice(j, 0, sites.splice(i, 1)[0]);
+  saveSites(); refreshSitesUI();
+}
 function moveGroup(id, dir) {
   // Groups render in array order everywhere: the rail, the manager and the attach list
   const i = siteGroups.findIndex(g => g.id === id);
@@ -1826,17 +1838,18 @@ function renderSitesPanel() {
 function renderSitesList() {
   const box = document.getElementById("sitesList");
   if (!sites.length) { box.innerHTML = `<div class="site-check-empty">No sites yet. Add your first one below.</div>`; return; }
-  const row = s => s.id === editingSiteId ? siteEditRow(s) : siteViewRow(s);
+  const rows = list => list.map((s, i) =>
+    s.id === editingSiteId ? siteEditRow(s) : siteViewRow(s, i, list.length)).join("");
   let html = "";
   siteGroups.forEach(g => {
     const mine = sites.filter(s => s.groupId === g.id);
     if (!mine.length) return;
-    html += groupHeadHtml(g) + mine.map(row).join("");
+    html += groupHeadHtml(g) + rows(mine);
   });
   const loose = sites.filter(s => !groupOf(s));
   if (loose.length) {
     html += (siteGroups.length ? `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Ungrouped</div>` : "") +
-      loose.map(row).join("");
+      rows(loose);
   }
   box.innerHTML = html;
   if (editingSiteId) {
@@ -1877,10 +1890,15 @@ function openSiteGroup(gid) {
   try { window.focus(); } catch (e) {}
   if (blocked) alert(blocked + " of " + list.length + " sites were blocked by the pop-up blocker.\n\nAllow pop-ups for this page to open a whole group in one go.");
 }
-function siteViewRow(s) {
+function siteViewRow(s, i, n) {
   const note = (s.note || "").trim();
   const tip = (note ? note + "\n" : "") + s.url;
+  const mover = n > 1 ? `<span class="grp-move">
+       <button title="Move up" ${i === 0 ? "disabled" : ""} onclick="moveSite('${s.id}', -1)">▲</button>
+       <button title="Move down" ${i === n - 1 ? "disabled" : ""} onclick="moveSite('${s.id}', 1)">▼</button>
+     </span>` : "";
   return `<div class="site-row" style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml(tip)}">
+     ${mover}
      <span class="s-name">${escapeHtml(s.name)}</span>
      <span class="s-note${note ? "" : " none"}">${escapeHtml(note || s.url)}</span>
      <button title="Edit this site" onclick="editSite('${s.id}')">✏️</button>
