@@ -343,6 +343,10 @@
   }
   .grp-head:first-child { margin-top: 0; }
   .grp-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+  .grp-open {
+    margin-left: auto; flex: none; padding: 1px 7px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; border-radius: 3px;
+  }
   .site-row { border-left-width: 3px; }
   .links a.site-link { border-left-width: 3px; }
   .site-check-list .grp-head { margin: 8px 4px 3px; }
@@ -1811,12 +1815,11 @@ function renderSitesPanel() {
   let html = "";
   siteGroups.forEach(g => {
     const mine = sites.filter(s => s.groupId === g.id);
-    if (mine.length) html += groupHeadHtml(g) + mine.map(link).join("");
+    if (mine.length) html += groupHeadHtml(g, true) + mine.map(link).join("");
   });
   const loose = sites.filter(s => !groupOf(s));
   if (loose.length) {
-    html += (siteGroups.length ? `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Other</div>` : "") +
-      loose.map(link).join("");
+    html += (siteGroups.length ? looseHeadHtml(true) : "") + loose.map(link).join("");
   }
   box.innerHTML = html;
 }
@@ -1841,8 +1844,38 @@ function renderSitesList() {
     if (first) first.focus();
   }
 }
-function groupHeadHtml(g) {
-  return `<div class="grp-head"><span class="grp-dot" style="background:${escapeHtml(g.color)}"></span>${escapeHtml(g.name)}</div>`;
+function groupHeadHtml(g, withOpenAll) {
+  const n = sites.filter(s => s.groupId === g.id).length;
+  const btn = withOpenAll && n > 1
+    ? `<button class="grp-open" title="Open all ${n} sites in this group" onclick="openSiteGroup('${g.id}')">Open all</button>` : "";
+  return `<div class="grp-head"><span class="grp-dot" style="background:${escapeHtml(g.color)}"></span>${escapeHtml(g.name)}${btn}</div>`;
+}
+function looseHeadHtml(withOpenAll) {
+  const n = sites.filter(s => !groupOf(s)).length;
+  const btn = withOpenAll && n > 1
+    ? `<button class="grp-open" title="Open all ${n} ungrouped sites" onclick="openSiteGroup('')">Open all</button>` : "";
+  return `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Other${btn}</div>`;
+}
+/* Open every site in a group at once, reusing any tab that is already open. */
+function openSiteGroup(gid) {
+  const list = gid ? sites.filter(s => s.groupId === gid) : sites.filter(s => !groupOf(s));
+  if (!list.length) return;
+  let blocked = 0, opened = 0;
+  list.forEach(s => {
+    const name = "kbsite_" + s.id;
+    if (!siteReuse) { if (!window.open(s.url, "_blank", "noopener")) blocked++; else opened++; return; }
+    const held = siteWindows[s.id];
+    try { if (held && !held.closed) return; } catch (e) {}
+    let win = null;
+    try { win = window.open("", name); } catch (e) {}
+    if (!win) { blocked++; return; }
+    siteWindows[s.id] = win;
+    let isNew = false;
+    try { isNew = !win.location.href || win.location.href === "about:blank"; } catch (e) { isNew = false; }
+    if (isNew) { win.location.href = s.url; opened++; }
+  });
+  try { window.focus(); } catch (e) {}
+  if (blocked) alert(blocked + " of " + list.length + " sites were blocked by the pop-up blocker.\n\nAllow pop-ups for this page to open a whole group in one go.");
 }
 function siteViewRow(s) {
   const note = (s.note || "").trim();
