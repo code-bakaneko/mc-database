@@ -81,10 +81,17 @@
     display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start;
   }
   main { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
-  @media (max-width: 1090px) { .page { grid-template-columns: minmax(0, 1fr); } }
-  @media (max-width: 720px) { main { grid-template-columns: 1fr; } main > aside { order: -1; } }
+  @media (max-width: 1090px) {
+    .page { grid-template-columns: minmax(0, 1fr); }
+    .sites-panel { position: static; max-height: none; overflow: visible; }
+  }
+  @media (max-width: 720px) {
+    main { grid-template-columns: 1fr; }
+    main > aside { order: -1; position: static; max-height: none; overflow: visible; }
+  }
   aside {
     align-self: start; position: sticky; top: 128px;
+    max-height: calc(100vh - 148px); overflow-y: auto; overscroll-behavior: contain;
     background: var(--panel); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
   }
