@@ -110,12 +110,19 @@
     border-bottom: 1px solid var(--border); margin-bottom: 6px;
   }
   .sp-head button { margin-left: auto; padding: 4px 8px; font-size: 12px; }
+  .sp-item { position: relative; margin-bottom: 4px; }
   .sp-site {
     display: block; text-decoration: none; color: var(--text);
-    padding: 7px 9px; margin-bottom: 4px; border-radius: 4px;
+    padding: 7px 9px; border-radius: 4px;
     border: 1px solid var(--border); border-left: 3px solid var(--border); background: var(--panel-2);
   }
+  .sp-item .sp-site { padding-right: 30px; }
   .sp-site:hover { background: var(--panel); border-color: var(--link); border-left-color: inherit; }
+  .sp-reload {
+    position: absolute; top: 5px; right: 5px; padding: 1px 5px; line-height: 16px;
+    font-size: 12px; opacity: .4; background: var(--panel); border-radius: 3px;
+  }
+  .sp-item:hover .sp-reload, .sp-reload:focus { opacity: 1; }
   .sp-name { display: block; font-size: 14px; font-weight: 600; }
   .sp-note { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
   .sp-empty { font-size: 13px; color: var(--muted); padding: 8px 4px; }
@@ -351,10 +358,12 @@
   }
   .grp-head:first-child { margin-top: 0; }
   .grp-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+  .grp-acts { margin-left: auto; flex: none; display: flex; gap: 4px; }
   .grp-open {
-    margin-left: auto; flex: none; padding: 1px 7px; font-size: 10px; font-weight: 700;
+    flex: none; padding: 1px 7px; font-size: 10px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .04em; border-radius: 3px;
   }
+  .grp-reload { font-size: 11px; padding: 1px 6px; letter-spacing: 0; }
   .site-row { border-left-width: 3px; }
   .links a.site-link { border-left-width: 3px; }
   .site-check-list .grp-head { margin: 8px 4px 3px; }
@@ -450,6 +459,7 @@
   .td-main { flex: 1; min-width: 0; }
   .td-title { font-size: 15px; font-weight: 600; }
   .td-when { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .td-opt { font-weight: 400; color: var(--muted); font-size: 11px; }
   .td-time {
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; font-weight: 700;
     padding: 2px 7px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border); flex: none;
@@ -631,8 +641,12 @@
       <div class="td-head">Due today</div>
       <div id="todoToday"></div>
     </div>
+    <div class="td-section hidden" id="todoAnytimeSection">
+      <div class="td-head">No date — whenever you get to it</div>
+      <div id="todoAnytime"></div>
+    </div>
     <div class="td-section">
-      <div class="td-head">All recurring tasks</div>
+      <div class="td-head">All tasks</div>
       <div id="todoAll"></div>
     </div>
     <div class="td-section">
@@ -643,13 +657,14 @@
             <label>What needs doing?</label>
             <input type="text" id="tdTitle" placeholder="e.g. Check emails" autocomplete="off">
           </div>
-          <div style="flex:0 0 120px;min-width:110px;">
-            <label>Time</label>
-            <input type="time" id="tdTime" value="08:00">
+          <div style="flex:0 0 140px;min-width:120px;">
+            <label>Time <span class="td-opt">optional</span></label>
+            <input type="time" id="tdTime" value="">
           </div>
         </div>
         <label>How often?</label>
         <select id="tdSched" onchange="renderTodoDayPicker()">
+          <option value="none">No date — just keep it on the list</option>
           <option value="weekdays">Weekdays (Mon–Fri)</option>
           <option value="daily">Every day</option>
           <option value="days">Certain days…</option>
@@ -998,11 +1013,17 @@ function loadTodos() {
     const raw = localStorage.getItem(TODOS_KEY);
     if (raw) { todos = JSON.parse(raw) || []; return; }
   } catch (e) {}
-  todos = [{ id: uid(), title: "Check emails", sched: "weekdays", days: [1, 2, 3, 4, 5], date: "", time: "08:00", doneDates: [] }];
+  todos = [
+    { id: uid(), title: "Check emails", sched: "weekdays", days: [1, 2, 3, 4, 5], date: "", time: "08:00", done: false, doneDates: [] },
+    { id: uid(), title: "Tidy the knowledge base", sched: "none", days: [], date: "", time: "", done: false, doneDates: [] }
+  ];
   saveTodos();
 }
 function saveTodos() {
-  todos.forEach(t => { if (!Array.isArray(t.doneDates)) t.doneDates = []; });
+  todos.forEach(t => {
+    if (!Array.isArray(t.doneDates)) t.doneDates = [];
+    if (typeof t.done !== "boolean") t.done = false;   // only ever read for undated tasks
+  });
   try { localStorage.setItem(TODOS_KEY, JSON.stringify(todos)); }
   catch (e) { alert("Could not save your to-do list — browser storage may be full."); }
 }
@@ -1824,12 +1845,15 @@ function renderSitesPanel() {
   }
   const link = s => {
     const note = (s.note || "").trim();
-    return `<a class="sp-site" href="${escapeHtml(s.url)}" target="${siteTarget(s)}" ${siteReuse ? "" : 'rel="noopener"'}
+    return `<div class="sp-item">
+     <a class="sp-site" href="${escapeHtml(s.url)}" target="${siteTarget(s)}" ${siteReuse ? "" : 'rel="noopener"'}
        onclick="return openSite(event,'${s.id}')" onauxclick="return true"
        style="border-left-color:${escapeHtml(groupColor(s))}" title="${escapeHtml(note || s.url)}">
        <span class="sp-name">${escapeHtml(s.name)}</span>
        ${note ? `<span class="sp-note">${escapeHtml(note)}</span>` : ""}
-     </a>`;
+     </a>
+     ${siteReuse ? `<button class="sp-reload" title="Reload ${escapeHtml(s.name)} in its tab" onclick="reloadSite('${s.id}')">\u21BB</button>` : ""}
+   </div>`;
   };
   let html = "";
   siteGroups.forEach(g => {
@@ -1864,38 +1888,84 @@ function renderSitesList() {
     if (first) first.focus();
   }
 }
-function groupHeadHtml(g, withOpenAll) {
+function groupHeadHtml(g, withActions) {
   const n = sites.filter(s => s.groupId === g.id).length;
-  const btn = withOpenAll && n > 1
-    ? `<button class="grp-open" title="Open all ${n} sites in this group" onclick="openSiteGroup('${g.id}')">Open all</button>` : "";
-  return `<div class="grp-head"><span class="grp-dot" style="background:${escapeHtml(g.color)}"></span>${escapeHtml(g.name)}${btn}</div>`;
+  return `<div class="grp-head"><span class="grp-dot" style="background:${escapeHtml(g.color)}"></span>${
+    escapeHtml(g.name)}${groupActsHtml(g.id, n, withActions)}</div>`;
 }
-function looseHeadHtml(withOpenAll) {
+function looseHeadHtml(withActions) {
   const n = sites.filter(s => !groupOf(s)).length;
-  const btn = withOpenAll && n > 1
-    ? `<button class="grp-open" title="Open all ${n} ungrouped sites" onclick="openSiteGroup('')">Open all</button>` : "";
-  return `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Other${btn}</div>`;
+  return `<div class="grp-head"><span class="grp-dot" style="background:var(--border)"></span>Other${
+    groupActsHtml("", n, withActions)}</div>`;
 }
-/* Open every site in a group at once, reusing any tab that is already open. */
+function groupActsHtml(gid, n, withActions) {
+  if (!withActions || n < 2) return "";
+  const what = n + (gid ? " sites in this group" : " ungrouped sites");
+  // Reloading needs the named tabs, so it is only offered when reuse is on
+  const reload = siteReuse
+    ? `<button class="grp-open grp-reload" title="Reload all ${what}" onclick="reloadSiteGroup('${gid}')">\u21BB</button>` : "";
+  return `<span class="grp-acts">
+    <button class="grp-open" title="Open all ${what}" onclick="openSiteGroup('${gid}')">Open all</button>${reload}</span>`;
+}
+/* The tab a site lives in: the handle we already hold, or whatever the browser
+   hands back for its name — the existing tab if there is one, a fresh blank tab
+   if there is not. Null means the pop-up blocker stopped us. */
+function siteTab(s) {
+  let win = null;
+  try { if (siteWindows[s.id] && !siteWindows[s.id].closed) win = siteWindows[s.id]; } catch (e) {}
+  if (!win) { try { win = window.open("", "kbsite_" + s.id); } catch (e) {} }
+  if (win) siteWindows[s.id] = win;
+  return win;
+}
+/* A tab we just conjured is blank; one already showing a site is cross-origin,
+   so reading its href throws — which is itself the tell that it is not new. */
+function isBlankTab(win) {
+  try { return !win.location.href || win.location.href === "about:blank"; }
+  catch (e) { return false; }
+}
+function popupAlert(blocked, total, what) {
+  alert(blocked + " of " + total + " sites were blocked by the pop-up blocker.\n\nAllow pop-ups for this page to " + what + " in one go.");
+}
+/* Open every site in a group at once. Anything already open is left exactly as
+   it is — use Reload all when you want those tabs sent back to the top. */
 function openSiteGroup(gid) {
   const list = gid ? sites.filter(s => s.groupId === gid) : sites.filter(s => !groupOf(s));
   if (!list.length) return;
-  let blocked = 0, opened = 0;
+  let blocked = 0;
   list.forEach(s => {
-    const name = "kbsite_" + s.id;
-    if (!siteReuse) { if (!window.open(s.url, "_blank", "noopener")) blocked++; else opened++; return; }
-    const held = siteWindows[s.id];
-    try { if (held && !held.closed) return; } catch (e) {}
-    let win = null;
-    try { win = window.open("", name); } catch (e) {}
+    if (!siteReuse) { if (!window.open(s.url, "_blank", "noopener")) blocked++; return; }
+    const win = siteTab(s);
     if (!win) { blocked++; return; }
-    siteWindows[s.id] = win;
-    let isNew = false;
-    try { isNew = !win.location.href || win.location.href === "about:blank"; } catch (e) { isNew = false; }
-    if (isNew) { win.location.href = s.url; opened++; }
+    if (isBlankTab(win)) win.location.href = s.url;
   });
   try { window.focus(); } catch (e) {}
-  if (blocked) alert(blocked + " of " + list.length + " sites were blocked by the pop-up blocker.\n\nAllow pop-ups for this page to open a whole group in one go.");
+  if (blocked) popupAlert(blocked, list.length, "open a whole group");
+}
+/* Reload one site's tab. Navigating a tab is allowed cross-origin even though
+   reading it is not, so pointing it back at the site's own address is our
+   reload — it also opens the tab if it was closed. Stays in the background. */
+function reloadSite(id) {
+  const s = sites.find(x => x.id === id);
+  if (!s) return;
+  if (!siteReuse) { window.open(s.url, "_blank", "noopener"); return; }
+  const win = siteTab(s);
+  if (!win) { popupAlert(1, 1, "reload a tab"); return; }
+  try { win.location.href = s.url; } catch (e) {}
+  try { window.focus(); } catch (e) {}
+}
+/* Reload every site in a group, opening any whose tab you had closed. */
+function reloadSiteGroup(gid) {
+  const list = gid ? sites.filter(s => s.groupId === gid) : sites.filter(s => !groupOf(s));
+  if (!list.length) return;
+  let blocked = 0;
+  list.forEach(s => {
+    if (!siteReuse) { if (!window.open(s.url, "_blank", "noopener")) blocked++; return; }
+    const win = siteTab(s);
+    if (!win) { blocked++; return; }
+    try { win.location.href = s.url; } catch (e) { blocked++; }
+  });
+  try { window.focus(); } catch (e) {}
+  if (blocked) popupAlert(blocked, list.length, "reload a whole group");
 }
 function siteViewRow(s, i, n) {
   const note = (s.note || "").trim();
@@ -1968,13 +2038,22 @@ function deleteSite(id) {
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function dowOf(iso) { return parseISO(iso).getDay(); }
 function todoDueOn(t, iso) {
+  if (t.sched === "none") return false;          // undated: it never lands on a given day
   if (t.sched === "daily") return true;
   if (t.sched === "weekdays") { const d = dowOf(iso); return d >= 1 && d <= 5; }
   if (t.sched === "days") return (t.days || []).includes(dowOf(iso));
   if (t.sched === "once") return t.date === iso;
   return false;
 }
-function todoDone(t, iso) { return (t.doneDates || []).includes(iso); }
+// Dated tasks are done per-day; an undated one is just done, once and for all
+function todoDone(t, iso) {
+  if (t.sched === "none") return !!t.done;
+  return (t.doneDates || []).includes(iso);
+}
+function todosAnytime() {
+  return todos.filter(t => t.sched === "none")
+    .sort((a, b) => (todoDone(a) ? 1 : 0) - (todoDone(b) ? 1 : 0) || a.title.localeCompare(b.title));
+}
 function todosDueToday() {
   const today = todoISO();
   return todos.filter(t => todoDueOn(t, today))
@@ -1989,6 +2068,7 @@ function fmtTime(hhmm) {
   catch (e) { return hhmm; }
 }
 function schedLabel(t) {
+  if (t.sched === "none") return "No date";
   if (t.sched === "daily") return "Every day";
   if (t.sched === "weekdays") return "Weekdays (Mon–Fri)";
   if (t.sched === "days") return (t.days || []).slice().sort().map(d => DAY_NAMES[d]).join(", ") || "No days picked";
@@ -2004,6 +2084,7 @@ function todoOverdue(t, now) {
 function toggleTodo(id) {
   const t = todos.find(x => x.id === id);
   if (!t) return;
+  if (t.sched === "none") { t.done = !t.done; saveTodos(); render(); return; }
   const today = todoISO();
   t.doneDates = t.doneDates || [];
   if (todoDone(t, today)) t.doneDates = t.doneDates.filter(d => d !== today);
@@ -2022,6 +2103,8 @@ function renderTodoDayPicker() {
       `</div>`;
   } else if (sched === "once") {
     box.innerHTML = `<label>On which day?</label><input type="date" id="tdDate" value="${todoISO()}">`;
+  } else if (sched === "none") {
+    box.innerHTML = `<div class="hint">It stays on the list until you tick it off — no day, no reminder.</div>`;
   } else box.innerHTML = "";
 }
 function readSchedule() {
@@ -2037,7 +2120,7 @@ function addTodo() {
   if (!title) { alert("Give the task a name first."); titleEl.focus(); return; }
   const sch = readSchedule();
   if (!sch) return;
-  todos.push(Object.assign({ id: uid(), title, time: document.getElementById("tdTime").value || "", doneDates: [] }, sch));
+  todos.push(Object.assign({ id: uid(), title, time: document.getElementById("tdTime").value || "", done: false, doneDates: [] }, sch));
   saveTodos();
   titleEl.value = "";
   titleEl.focus();
@@ -2065,8 +2148,15 @@ function saveTodoEdit(id) {
     t.days = days;
   }
   if (t.sched === "once") t.date = document.getElementById("td-date-" + id).value || todoISO();
+  if (t.sched === "none") { t.days = []; t.date = ""; }
   editingTodoId = null;
   saveTodos(); render();
+}
+// Only show the day picker / date box when the chosen schedule actually uses one
+function syncTodoEditSched(id) {
+  const sched = document.getElementById("td-sched-" + id).value;
+  document.getElementById("td-days-" + id).classList.toggle("hidden", sched !== "days");
+  document.getElementById("td-date-" + id).classList.toggle("hidden", sched !== "once");
 }
 function todoMatches(t) {
   const terms = queryTerms();
@@ -2082,24 +2172,26 @@ function todoRowHtml(t, forToday) {
       <input type="text" id="td-title-${t.id}" value="${escapeHtml(t.title)}">
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <input type="time" id="td-time-${t.id}" value="${escapeHtml(t.time || "")}" style="width:auto;">
-        <select id="td-sched-${t.id}" style="width:auto;flex:1;min-width:150px;">
+        <select id="td-sched-${t.id}" style="width:auto;flex:1;min-width:150px;" onchange="syncTodoEditSched('${t.id}')">
+          <option value="none" ${sel("none")}>No date</option>
           <option value="weekdays" ${sel("weekdays")}>Weekdays (Mon–Fri)</option>
           <option value="daily" ${sel("daily")}>Every day</option>
           <option value="days" ${sel("days")}>Certain days</option>
           <option value="once" ${sel("once")}>One-off</option>
         </select>
       </div>
-      <div class="td-days" id="td-days-${t.id}">${DAY_NAMES.map((n, i) =>
+      <div class="td-days${t.sched === "days" ? "" : " hidden"}" id="td-days-${t.id}">${DAY_NAMES.map((n, i) =>
         `<label><input type="checkbox" value="${i}" ${(t.days || []).includes(i) ? "checked" : ""}>${n}</label>`).join("")}</div>
-      <input type="date" id="td-date-${t.id}" value="${escapeHtml(t.date || todoISO())}">
+      <input type="date" id="td-date-${t.id}" class="${t.sched === "once" ? "" : "hidden"}" value="${escapeHtml(t.date || todoISO())}">
       <div style="display:flex;gap:6px;justify-content:flex-end;">
         <button class="muted-btn" onclick="cancelTodoEdit()">Cancel</button>
         <button class="primary" onclick="saveTodoEdit('${t.id}')">Save</button>
       </div>
     </div></div>`;
   }
+  const tickable = forToday || t.sched === "none";
   return `<div class="td-row${done ? " done" : ""}${!done && over && forToday ? " overdue" : ""}">
-    ${forToday ? `<input type="checkbox" ${done ? "checked" : ""} title="Mark done for today" onchange="toggleTodo('${t.id}')">` : ""}
+    ${tickable ? `<input type="checkbox" ${done ? "checked" : ""} title="${t.sched === "none" ? "Mark done" : "Mark done for today"}" onchange="toggleTodo('${t.id}')">` : ""}
     <div class="td-main">
       <div class="td-title">${highlight(t.title, query)}</div>
       <div class="td-when">${escapeHtml(schedLabel(t))}${t.time ? " · " + escapeHtml(fmtTime(t.time)) : ""}${
@@ -2129,7 +2221,14 @@ function renderTodo() {
     ? shown.map(t => todoRowHtml(t, true)).join("")
     : `<div class="td-empty">${due.length ? "Everything scheduled for today is done. 🎉" : "Nothing scheduled for today."}</div>`;
 
-  const all = todos.filter(todoMatches).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  const anytime = todosAnytime().filter(todoMatches);
+  document.getElementById("todoAnytimeSection").classList.toggle("hidden", !todosAnytime().length);
+  document.getElementById("todoAnytime").innerHTML = anytime.length
+    ? anytime.map(t => todoRowHtml(t, false)).join("")
+    : `<div class="td-empty">Nothing here matches your search.</div>`;
+
+  const all = todos.filter(todoMatches).sort((a, b) =>
+    (a.sched === "none") - (b.sched === "none") || (a.time || "\uffff").localeCompare(b.time || "\uffff"));
   document.getElementById("todoAll").innerHTML = all.length
     ? all.map(t => todoRowHtml(t, false)).join("")
     : `<div class="td-empty">No tasks yet — add one below.</div>`;
